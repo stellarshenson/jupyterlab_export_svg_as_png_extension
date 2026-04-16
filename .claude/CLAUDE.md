@@ -633,11 +633,11 @@ See the `mermaid-diagrams` skill for PNG generation commands, numbering conventi
 
 ## Project Context
 
-This is `jupyterlab_copy_svg_as_png_extension` - a JupyterLab 4 extension (TypeScript frontend + Python server extension) that allows copying and exporting SVG graphics as PNG images within JupyterLab.
+This is `jupyterlab_export_svg_as_png_extension` - a JupyterLab 4 extension (TypeScript frontend + Python server extension) that allows copying and exporting SVG graphics as PNG images within JupyterLab.
 
-- **npm package**: `jupyterlab_copy_svg_as_png_extension`
-- **PyPI package**: `jupyterlab-copy-svg-as-png-extension`
-- **GitHub repository**: `stellarshenson/jupyterlab_copy_svg_as_png_extension`
+- **npm package**: `jupyterlab_export_svg_as_png_extension`
+- **PyPI package**: `jupyterlab-export-svg-as-png-extension`
+- **GitHub repository**: `stellarshenson/jupyterlab_export_svg_as_png_extension`
 - **Extension type**: frontend-and-server (copier template)
 - **Target**: JupyterLab >= 4.0.0
 

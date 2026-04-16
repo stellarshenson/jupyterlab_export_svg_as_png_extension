@@ -1,9 +1,9 @@
-# jupyterlab_copy_svg_as_png_extension
+# jupyterlab_export_svg_as_png_extension
 
-[![GitHub Actions](https://github.com/stellarshenson/jupyterlab_copy_svg_as_png_extension/actions/workflows/build.yml/badge.svg)](https://github.com/stellarshenson/jupyterlab_copy_svg_as_png_extension/actions/workflows/build.yml)
-[![npm version](https://img.shields.io/npm/v/jupyterlab_copy_svg_as_png_extension.svg)](https://www.npmjs.com/package/jupyterlab_copy_svg_as_png_extension)
-[![PyPI version](https://img.shields.io/pypi/v/jupyterlab-copy-svg-as-png-extension.svg)](https://pypi.org/project/jupyterlab-copy-svg-as-png-extension/)
-[![Total PyPI downloads](https://static.pepy.tech/badge/jupyterlab-copy-svg-as-png-extension)](https://pepy.tech/project/jupyterlab-copy-svg-as-png-extension)
+[![GitHub Actions](https://github.com/stellarshenson/jupyterlab_export_svg_as_png_extension/actions/workflows/build.yml/badge.svg)](https://github.com/stellarshenson/jupyterlab_export_svg_as_png_extension/actions/workflows/build.yml)
+[![npm version](https://img.shields.io/npm/v/jupyterlab_export_svg_as_png_extension.svg)](https://www.npmjs.com/package/jupyterlab_export_svg_as_png_extension)
+[![PyPI version](https://img.shields.io/pypi/v/jupyterlab-export-svg-as-png-extension.svg)](https://pypi.org/project/jupyterlab-export-svg-as-png-extension/)
+[![Total PyPI downloads](https://static.pepy.tech/badge/jupyterlab-export-svg-as-png-extension)](https://pepy.tech/project/jupyterlab-export-svg-as-png-extension)
 [![JupyterLab 4](https://img.shields.io/badge/JupyterLab-4-orange.svg)](https://jupyterlab.readthedocs.io/en/stable/)
 [![Brought To You By KOLOMOLO](https://img.shields.io/badge/Brought%20To%20You%20By-KOLOMOLO-00ffff?style=flat)](https://kolomolo.com)
 [![Donate PayPal](https://img.shields.io/badge/Donate-PayPal-blue?style=flat)](https://www.paypal.com/donate/?hosted_button_id=B4KPBJDLLXTSA)
@@ -27,11 +27,11 @@ Copy or export any SVG graphic in JupyterLab as a high-quality PNG image. Right-
 Requires JupyterLab 4.0.0 or higher.
 
 ```bash
-pip install jupyterlab-copy-svg-as-png-extension
+pip install jupyterlab-export-svg-as-png-extension
 ```
 
 ## Uninstall
 
 ```bash
-pip uninstall jupyterlab-copy-svg-as-png-extension
+pip uninstall jupyterlab-export-svg-as-png-extension
 ```

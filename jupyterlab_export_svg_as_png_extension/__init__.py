@@ -5,7 +5,7 @@ except ImportError:
     # in editable mode with pip. It is highly recommended to install
     # the package from a stable release or in editable mode: https://pip.pypa.io/en/stable/topics/local-project-installs/#editable-installs
     import warnings
-    warnings.warn("Importing 'jupyterlab_copy_svg_as_png_extension' outside a proper installation.")
+    warnings.warn("Importing 'jupyterlab_export_svg_as_png_extension' outside a proper installation.")
     __version__ = "dev"
 from .routes import setup_route_handlers
 
@@ -13,13 +13,13 @@ from .routes import setup_route_handlers
 def _jupyter_labextension_paths():
     return [{
         "src": "labextension",
-        "dest": "jupyterlab_copy_svg_as_png_extension"
+        "dest": "jupyterlab_export_svg_as_png_extension"
     }]
 
 
 def _jupyter_server_extension_points():
     return [{
-        "module": "jupyterlab_copy_svg_as_png_extension"
+        "module": "jupyterlab_export_svg_as_png_extension"
     }]
 
 
@@ -32,5 +32,5 @@ def _load_jupyter_server_extension(server_app):
         JupyterLab application instance
     """
     setup_route_handlers(server_app.web_app)
-    name = "jupyterlab_copy_svg_as_png_extension"
+    name = "jupyterlab_export_svg_as_png_extension"
     server_app.log.info(f"Registered {name} server extension")

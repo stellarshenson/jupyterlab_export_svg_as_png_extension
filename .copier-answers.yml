@@ -7,10 +7,10 @@ has_ai_rules: false
 has_binder: false
 has_settings: false
 kind: frontend-and-server
-labextension_name: jupyterlab_copy_svg_as_png_extension
+labextension_name: jupyterlab_export_svg_as_png_extension
 project_short_description: Jupyterlab extension to allow copying and exporting any
     given SVG graphics as PNG
-python_name: jupyterlab_copy_svg_as_png_extension
+python_name: jupyterlab_export_svg_as_png_extension
 repository: ''
 test: true
 

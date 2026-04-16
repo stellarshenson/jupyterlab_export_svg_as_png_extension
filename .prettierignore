@@ -3,4 +3,4 @@ node_modules
 **/lib
 **/package.json
 !/package.json
-jupyterlab_copy_svg_as_png_extension
+jupyterlab_export_svg_as_png_extension

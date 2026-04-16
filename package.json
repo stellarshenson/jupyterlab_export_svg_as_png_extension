@@ -1,15 +1,15 @@
 {
-    "name": "jupyterlab_copy_svg_as_png_extension",
-    "version": "0.1.0",
+    "name": "jupyterlab_export_svg_as_png_extension",
+    "version": "0.1.1",
     "description": "Jupyterlab extension to allow copying and exporting any given SVG graphics as PNG",
     "keywords": [
         "jupyter",
         "jupyterlab",
         "jupyterlab-extension"
     ],
-    "homepage": "https://github.com/stellarshenson/jupyterlab_copy_svg_as_png_extension",
+    "homepage": "https://github.com/stellarshenson/jupyterlab_export_svg_as_png_extension",
     "bugs": {
-        "url": "https://github.com/stellarshenson/jupyterlab_copy_svg_as_png_extension/issues"
+        "url": "https://github.com/stellarshenson/jupyterlab_export_svg_as_png_extension/issues"
     },
     "license": "BSD-3-Clause",
     "author": {
@@ -26,7 +26,7 @@
     "style": "style/index.css",
     "repository": {
         "type": "git",
-        "url": "https://github.com/stellarshenson/jupyterlab_copy_svg_as_png_extension.git"
+        "url": "https://github.com/stellarshenson/jupyterlab_export_svg_as_png_extension.git"
     },
     "scripts": {
         "build": "jlpm build:lib && jlpm build:labextension:dev",
@@ -38,7 +38,7 @@
         "clean": "jlpm clean:lib",
         "clean:lib": "rimraf lib tsconfig.tsbuildinfo",
         "clean:lintcache": "rimraf .eslintcache .stylelintcache",
-        "clean:labextension": "rimraf jupyterlab_copy_svg_as_png_extension/labextension jupyterlab_copy_svg_as_png_extension/_version.py",
+        "clean:labextension": "rimraf jupyterlab_export_svg_as_png_extension/labextension jupyterlab_export_svg_as_png_extension/_version.py",
         "clean:all": "jlpm clean:lib && jlpm clean:labextension && jlpm clean:lintcache",
         "eslint": "jlpm eslint:check --fix",
         "eslint:check": "eslint . --cache --ext .ts,.tsx",
@@ -57,8 +57,10 @@
     },
     "dependencies": {
         "@jupyterlab/application": "^4.0.0",
+        "@jupyterlab/apputils": "^4.0.0",
         "@jupyterlab/coreutils": "^6.0.0",
-        "@jupyterlab/services": "^7.0.0"
+        "@jupyterlab/services": "^7.0.0",
+        "@jupyterlab/settingregistry": "^4.0.0"
     },
     "devDependencies": {
         "@jupyterlab/builder": "^4.0.0",
@@ -106,12 +108,13 @@
                     "pip"
                 ],
                 "base": {
-                    "name": "jupyterlab_copy_svg_as_png_extension"
+                    "name": "jupyterlab_export_svg_as_png_extension"
                 }
             }
         },
         "extension": true,
-        "outputDir": "jupyterlab_copy_svg_as_png_extension/labextension"
+        "outputDir": "jupyterlab_export_svg_as_png_extension/labextension",
+        "schemaDir": "schema"
     },
     "eslintIgnore": [
         "node_modules",

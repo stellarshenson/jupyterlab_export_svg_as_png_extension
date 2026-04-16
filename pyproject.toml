@@ -3,7 +3,7 @@ requires = ["hatchling>=1.5.0", "jupyterlab>=4.0.0,<5", "hatch-nodejs-version>=0
 build-backend = "hatchling.build"
 
 [project]
-name = "jupyterlab_copy_svg_as_png_extension"
+name = "jupyterlab_export_svg_as_png_extension"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
@@ -46,25 +46,25 @@ source = "nodejs"
 fields = ["description", "authors", "urls", "keywords"]
 
 [tool.hatch.build.targets.sdist]
-artifacts = ["jupyterlab_copy_svg_as_png_extension/labextension"]
+artifacts = ["jupyterlab_export_svg_as_png_extension/labextension"]
 exclude = [".github", "binder"]
 
 [tool.hatch.build.targets.wheel.shared-data]
-"jupyterlab_copy_svg_as_png_extension/labextension" = "share/jupyter/labextensions/jupyterlab_copy_svg_as_png_extension"
-"install.json" = "share/jupyter/labextensions/jupyterlab_copy_svg_as_png_extension/install.json"
+"jupyterlab_export_svg_as_png_extension/labextension" = "share/jupyter/labextensions/jupyterlab_export_svg_as_png_extension"
+"install.json" = "share/jupyter/labextensions/jupyterlab_export_svg_as_png_extension/install.json"
 "jupyter-config/server-config" = "etc/jupyter/jupyter_server_config.d"
 
 [tool.hatch.build.hooks.version]
-path = "jupyterlab_copy_svg_as_png_extension/_version.py"
+path = "jupyterlab_export_svg_as_png_extension/_version.py"
 
 [tool.hatch.build.hooks.jupyter-builder]
 dependencies = ["hatch-jupyter-builder>=0.5"]
 build-function = "hatch_jupyter_builder.npm_builder"
 ensured-targets = [
-    "jupyterlab_copy_svg_as_png_extension/labextension/static/style.js",
-    "jupyterlab_copy_svg_as_png_extension/labextension/package.json",
+    "jupyterlab_export_svg_as_png_extension/labextension/static/style.js",
+    "jupyterlab_export_svg_as_png_extension/labextension/package.json",
 ]
-skip-if-exists = ["jupyterlab_copy_svg_as_png_extension/labextension/static/style.js"]
+skip-if-exists = ["jupyterlab_export_svg_as_png_extension/labextension/static/style.js"]
 
 [tool.hatch.build.hooks.jupyter-builder.build-kwargs]
 build_cmd = "build:prod"
@@ -74,7 +74,7 @@ npm = ["jlpm"]
 build_cmd = "install:extension"
 npm = ["jlpm"]
 source_dir = "src"
-build_dir = "jupyterlab_copy_svg_as_png_extension/labextension"
+build_dir = "jupyterlab_export_svg_as_png_extension/labextension"
 
 [tool.jupyter-releaser.options]
 version_cmd = "hatch version"

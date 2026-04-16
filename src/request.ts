@@ -18,7 +18,7 @@ export async function requestAPI<T>(
   // Make request to Jupyter API
   const requestUrl = URLExt.join(
     serverSettings.baseUrl,
-    'jupyterlab-copy-svg-as-png-extension', // our server extension's API namespace
+    'jupyterlab-export-svg-as-png-extension', // our server extension's API namespace
     endPoint
   );
 
