@@ -25,7 +25,13 @@ classifiers = [
 dependencies = [
     "jupyter_server>=2.4.0,<3"
 ]
-dynamic = ["version", "description", "authors", "urls", "keywords"]
+dynamic = ["version", "description", "authors", "keywords"]
+
+[project.urls]
+Homepage = "https://github.com/stellarshenson/jupyterlab_export_svg_as_png_extension"
+Repository = "https://github.com/stellarshenson/jupyterlab_export_svg_as_png_extension.git"
+Issues = "https://github.com/stellarshenson/jupyterlab_export_svg_as_png_extension/issues"
+Changelog = "https://github.com/stellarshenson/jupyterlab_export_svg_as_png_extension/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [
@@ -43,7 +49,7 @@ test = [
 source = "nodejs"
 
 [tool.hatch.metadata.hooks.nodejs]
-fields = ["description", "authors", "urls", "keywords"]
+fields = ["description", "authors", "keywords"]
 
 [tool.hatch.build.targets.sdist]
 artifacts = ["jupyterlab_export_svg_as_png_extension/labextension"]

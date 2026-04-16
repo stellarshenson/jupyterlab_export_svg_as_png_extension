@@ -126,3 +126,6 @@ dmypy.json
 
 # Yarn cache
 .yarn/
+
+# Ad-hoc screenshots from interactive testing
+screenshot-*.png

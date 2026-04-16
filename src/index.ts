@@ -11,7 +11,10 @@ import { ISettingRegistry } from '@jupyterlab/settingregistry';
  * to match the current JupyterLab theme. This ensures exported PNGs
  * reflect what the user sees, not the OS color scheme preference.
  */
-function resolveThemeStyles(svgElement: SVGElement, themeMode: string = 'system'): void {
+function resolveThemeStyles(
+  svgElement: SVGElement,
+  themeMode: string = 'system'
+): void {
   let isDark: boolean;
   if (themeMode === 'dark') {
     isDark = true;
@@ -115,8 +118,7 @@ async function svgToPng(
       } else {
         // Fall back to getBBox
         try {
-          const graphicsElement =
-            svgElement as unknown as SVGGraphicsElement;
+          const graphicsElement = svgElement as unknown as SVGGraphicsElement;
           const bbox = graphicsElement.getBBox();
           width = bbox.width || 800;
           height = bbox.height || 600;
@@ -164,16 +166,13 @@ async function svgToPng(
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
   return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      blob => {
-        if (blob) {
-          resolve(blob);
-        } else {
-          reject(new Error('Failed to convert canvas to blob'));
-        }
-      },
-      'image/png'
-    );
+    canvas.toBlob(blob => {
+      if (blob) {
+        resolve(blob);
+      } else {
+        reject(new Error('Failed to convert canvas to blob'));
+      }
+    }, 'image/png');
   });
 }
 
@@ -210,7 +209,13 @@ async function imgToPng(
   const svgElement = doc.documentElement as unknown as SVGElement;
 
   // Delegate to svgToPng which handles theme resolution and rendering
-  return svgToPng(svgElement, targetDPI, backgroundColor, themeMode, imgElement);
+  return svgToPng(
+    svgElement,
+    targetDPI,
+    backgroundColor,
+    themeMode,
+    imgElement
+  );
 }
 
 /**
@@ -228,7 +233,7 @@ function simpleHash(str: string): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash;
   }
   return Math.abs(hash).toString(36).substring(0, 8).padStart(8, '0');
@@ -255,10 +260,7 @@ function generateFilename(app: JupyterFrontEnd, content: string): string {
 /**
  * Download PNG blob as file
  */
-function downloadPng(
-  blob: Blob,
-  filename: string = 'svg-graphic.png'
-): void {
+function downloadPng(blob: Blob, filename: string = 'svg-graphic.png'): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -316,8 +318,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
         settings.changed.connect(() => {
           targetDPI = settings.get('targetDPI').composite as number;
-          const bgType = settings.get('backgroundColor')
-            .composite as string;
+          const bgType = settings.get('backgroundColor').composite as string;
           const customBgColor = settings.get('customBackgroundColor')
             .composite as string;
           backgroundColor = resolveBackgroundColor(bgType, customBgColor);
@@ -342,6 +343,17 @@ const plugin: JupyterFrontEndPlugin<void> = {
       // Data URI SVGs
       if (src.startsWith('data:image/svg+xml')) {
         return true;
+      }
+      // Blob URLs (used by JupyterLab's ImageViewer) - check if the IMG
+      // is inside an ImageViewer whose document path ends in .svg
+      if (src.startsWith('blob:')) {
+        const viewer = img.closest('.jp-ImageViewer');
+        if (viewer) {
+          const widget = app.shell.currentWidget;
+          const title = (widget as any)?.title?.label || '';
+          return /\.svg$/i.test(title);
+        }
+        return false;
       }
       // HTTP URL SVGs (e.g. /files/path/to/image.svg?token=...)
       try {
@@ -372,8 +384,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
       }
 
       // Check target and ancestors for inline SVG, then descendants
-      const svgElement =
-        target.closest('svg') || target.querySelector('svg');
+      const svgElement = target.closest('svg') || target.querySelector('svg');
       if (svgElement) {
         return { type: 'svg', element: svgElement as SVGElement };
       }
@@ -389,16 +400,43 @@ const plugin: JupyterFrontEndPlugin<void> = {
       return null;
     };
 
-    // Check if mermaid extension already provides these commands on markdown
-    const hasMermaidExtension =
+    // Check if mermaid extension provides these commands on markdown.
+    // Mermaid's menu items are enabled only on mermaid diagrams - on other
+    // SVG content they appear grayed out. We detect this to skip our own
+    // markdown registration and avoid showing duplicate entries.
+    const hasMermaidExtension = (): boolean =>
       commands.hasCommand('mermaid:copy-as-png') ||
       commands.hasCommand('mermaid:download-as-png');
+
+    // Check if right-click target is inside rendered markdown
+    const isInMarkdownContext = (): boolean => {
+      if (!lastContextMenuTarget) {
+        return false;
+      }
+      return !!(lastContextMenuTarget as Element).closest(
+        '.jp-RenderedMarkdown'
+      );
+    };
+
+    // Our items should be hidden (not just disabled) when either there is
+    // nothing to export, or when the mermaid extension would show its own
+    // entry for the same context
+    const shouldShow = (): boolean => {
+      if (findSvgTarget() === null) {
+        return false;
+      }
+      if (hasMermaidExtension() && isInMarkdownContext()) {
+        return false;
+      }
+      return true;
+    };
 
     // --- Copy as PNG command ---
     const copySvgCommand = 'svg:copy-as-png';
     commands.addCommand(copySvgCommand, {
       label: 'Copy as PNG',
       caption: 'Copy SVG graphic as PNG image to clipboard',
+      isVisible: shouldShow,
       isEnabled: () => findSvgTarget() !== null,
       execute: async () => {
         try {
@@ -426,30 +464,32 @@ const plugin: JupyterFrontEndPlugin<void> = {
           }
           await copyPngToClipboard(pngBlob);
         } catch (error) {
-          console.error(
-            '[SVG Extension] Error copying SVG as PNG:',
-            error
-          );
+          console.error('[SVG Extension] Error copying SVG as PNG:', error);
         }
       }
     });
 
-    // Register context menu for SVG-containing areas
+    // Register context menu for SVG-containing areas.
+    // Note: .jp-RenderedMarkdown always has .jp-RenderedHTMLCommon too, so
+    // registering on only one selector avoids duplicate entries on the same
+    // element. The command's isVisible handles the mermaid conflict case.
+    // .jp-ImageViewer covers SVG files opened directly (isImgSvg filters by
+    // document extension to avoid showing on PNG/JPEG files).
     contextMenu.addItem({
       command: copySvgCommand,
       selector: '.jp-RenderedSVG',
       rank: 10
     });
-    // Only register on markdown if mermaid extension doesn't already handle it
-    // Note: .jp-RenderedMarkdown always has .jp-RenderedHTMLCommon too, so we
-    // only register on one to avoid duplicate menu entries on the same element
-    if (!hasMermaidExtension) {
-      contextMenu.addItem({
-        command: copySvgCommand,
-        selector: '.jp-RenderedHTMLCommon',
-        rank: 10
-      });
-    }
+    contextMenu.addItem({
+      command: copySvgCommand,
+      selector: '.jp-RenderedHTMLCommon',
+      rank: 10
+    });
+    contextMenu.addItem({
+      command: copySvgCommand,
+      selector: '.jp-ImageViewer',
+      rank: 10
+    });
 
     if (palette) {
       palette.addItem({
@@ -463,6 +503,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     commands.addCommand(downloadSvgCommand, {
       label: 'Save as PNG',
       caption: 'Save SVG graphic as PNG file',
+      isVisible: shouldShow,
       isEnabled: () => findSvgTarget() !== null,
       execute: async () => {
         try {
@@ -487,9 +528,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
               exportThemeMode
             );
           } else {
-            svgData = new XMLSerializer().serializeToString(
-              found.element
-            );
+            svgData = new XMLSerializer().serializeToString(found.element);
             pngBlob = await svgToPng(
               found.element,
               targetDPI,
@@ -501,10 +540,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
           const filename = generateFilename(app, svgData);
           downloadPng(pngBlob, filename);
         } catch (error) {
-          console.error(
-            '[SVG Extension] Error saving SVG as PNG:',
-            error
-          );
+          console.error('[SVG Extension] Error saving SVG as PNG:', error);
         }
       }
     });
@@ -514,13 +550,16 @@ const plugin: JupyterFrontEndPlugin<void> = {
       selector: '.jp-RenderedSVG',
       rank: 11
     });
-    if (!hasMermaidExtension) {
-      contextMenu.addItem({
-        command: downloadSvgCommand,
-        selector: '.jp-RenderedHTMLCommon',
-        rank: 11
-      });
-    }
+    contextMenu.addItem({
+      command: downloadSvgCommand,
+      selector: '.jp-RenderedHTMLCommon',
+      rank: 11
+    });
+    contextMenu.addItem({
+      command: downloadSvgCommand,
+      selector: '.jp-ImageViewer',
+      rank: 11
+    });
 
     if (palette) {
       palette.addItem({
