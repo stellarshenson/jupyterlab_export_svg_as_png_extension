@@ -1,0 +1,7 @@
+{
+  "ServerApp": {
+    "jpserver_extensions": {
+      "jupyterlab_copy_svg_as_png_extension": true
+    }
+  }
+}
