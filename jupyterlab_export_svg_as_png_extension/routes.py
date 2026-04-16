@@ -4,26 +4,34 @@ from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
 import tornado
 
-class HelloRouteHandler(APIHandler):
-    # The following decorator should be present on all verb methods (head, get, post,
-    # patch, put, delete, options) to ensure only authorized user can request the
-    # Jupyter server
+
+class HealthCheckHandler(APIHandler):
+    """
+    Simple health check endpoint for the extension.
+    Note: SVG to PNG conversion is handled entirely client-side.
+    """
+
     @tornado.web.authenticated
     def get(self):
-        self.finish(json.dumps({
-            "data": (
-                "Hello, world!"
-                " This is the '/jupyterlab-copy-svg-as-png-extension/hello' endpoint."
-                " Try visiting me in your browser!"
-            ),
-        }))
+        self.finish(
+            json.dumps(
+                {
+                    'status': 'ok',
+                    'message': 'jupyterlab_export_svg_as_png_extension is active',
+                    'rendering': 'client-side'
+                }
+            )
+        )
 
 
 def setup_route_handlers(web_app):
-    host_pattern = ".*$"
-    base_url = web_app.settings["base_url"]
+    host_pattern = '.*$'
 
-    hello_route_pattern = url_path_join(base_url, "jupyterlab-copy-svg-as-png-extension", "hello")
-    handlers = [(hello_route_pattern, HelloRouteHandler)]
+    base_url = web_app.settings['base_url']
 
+    health_pattern = url_path_join(
+        base_url, 'jupyterlab-export-svg-as-png-extension', 'health'
+    )
+
+    handlers = [(health_pattern, HealthCheckHandler)]
     web_app.add_handlers(host_pattern, handlers)

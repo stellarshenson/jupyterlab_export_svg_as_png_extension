@@ -18,9 +18,11 @@ Copy or export any SVG graphic in JupyterLab as a high-quality PNG image. Right-
 ## Features
 
 - **Copy SVG as PNG** - Right-click any SVG in a notebook output or document and copy it as a PNG to the clipboard
-- **Export SVG as PNG file** - Save any SVG as a high-quality PNG file to your local filesystem
-- **Server-side rendering** - Uses the server extension for accurate SVG-to-PNG conversion
-- **Configurable resolution** - Control the output PNG resolution and quality
+- **Save SVG as PNG file** - Download any SVG as a high-quality PNG file with a deterministic filename
+- **Theme-aware export** - Resolves `@media (prefers-color-scheme)` CSS in SVGs to match the current JupyterLab theme, so exported PNGs look exactly like what you see
+- **Configurable DPI** - Control output resolution from 72 (screen) to 1200 (professional print), default 300
+- **Background color options** - Export with transparent, white, black, or custom background color
+- **Works everywhere** - Context menu appears on SVG outputs, markdown previews, and HTML rendered content
 
 ## Installation
 

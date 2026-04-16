@@ -1,0 +1,31 @@
+{
+  "title": "SVG to PNG Extension",
+  "description": "Settings for SVG graphics PNG export",
+  "jupyter.lab.setting-icon": "ui-components:image",
+  "jupyter.lab.setting-icon-label": "SVG to PNG",
+  "type": "object",
+  "properties": {
+    "targetDPI": {
+      "title": "Target DPI",
+      "description": "Resolution for exported PNG images (dots per inch). Higher values produce larger, higher-quality images suitable for printing. Standard values: 96 (screen), 150 (draft print), 300 (standard print), 600 (high-quality print), 1200 (professional print).",
+      "type": "number",
+      "default": 300,
+      "minimum": 72,
+      "maximum": 1200
+    },
+    "backgroundColor": {
+      "title": "Background Color",
+      "description": "Background color for exported PNG images. Select 'custom' to specify a hex color.",
+      "type": "string",
+      "default": "transparent",
+      "enum": ["transparent", "white", "black", "custom"]
+    },
+    "customBackgroundColor": {
+      "title": "Custom Background Color",
+      "description": "Hex color code for custom background (e.g., #ff0000 for red). Only used when Background Color is set to 'custom'.",
+      "type": "string",
+      "default": "#ffffff"
+    }
+  },
+  "additionalProperties": false
+}
