@@ -178,8 +178,9 @@ async function svgToPng(
 }
 
 /**
- * Convert IMG element with SVG data URI to PNG.
- * Extracts the SVG, resolves theme styles, and renders via svgToPng.
+ * Convert IMG element referencing SVG to PNG.
+ * Handles both data URI SVGs and HTTP URL SVGs.
+ * Fetches/extracts the SVG, resolves theme styles, and renders via svgToPng.
  */
 async function imgToPng(
   imgElement: HTMLImageElement,
@@ -189,12 +190,18 @@ async function imgToPng(
 ): Promise<Blob> {
   const src = imgElement.src || '';
 
-  // Extract SVG text from data URI
   let svgText: string;
-  if (src.includes(';base64,')) {
-    svgText = atob(src.split(';base64,')[1]);
+  if (src.startsWith('data:image/svg+xml')) {
+    // Extract SVG text from data URI
+    if (src.includes(';base64,')) {
+      svgText = atob(src.split(';base64,')[1]);
+    } else {
+      svgText = decodeURIComponent(src.split(',').slice(1).join(','));
+    }
   } else {
-    svgText = decodeURIComponent(src.split(',').slice(1).join(','));
+    // Fetch SVG from HTTP URL (same-origin, e.g. JupyterHub /files/ endpoint)
+    const response = await fetch(src);
+    svgText = await response.text();
   }
 
   // Parse as SVG DOM element for theme resolution
@@ -329,6 +336,22 @@ const plugin: JupyterFrontEndPlugin<void> = {
       lastContextMenuTarget = e.target;
     });
 
+    // Helper: check if an IMG element references an SVG
+    const isImgSvg = (img: HTMLImageElement): boolean => {
+      const src = img.src || '';
+      // Data URI SVGs
+      if (src.startsWith('data:image/svg+xml')) {
+        return true;
+      }
+      // HTTP URL SVGs (e.g. /files/path/to/image.svg?token=...)
+      try {
+        const url = new URL(src);
+        return url.pathname.endsWith('.svg');
+      } catch {
+        return src.includes('.svg');
+      }
+    };
+
     // Helper: find SVG element at the right-click location
     // Searches the target itself, ancestors, and descendants
     const findSvgTarget = ():
@@ -340,11 +363,10 @@ const plugin: JupyterFrontEndPlugin<void> = {
       }
       const target = lastContextMenuTarget as Element;
 
-      // Check if target is IMG with SVG data URI
+      // Check if target is IMG referencing SVG (data URI or HTTP URL)
       if (target.tagName === 'IMG') {
         const imgElement = target as HTMLImageElement;
-        const src = imgElement.src || '';
-        if (src.startsWith('data:image/svg+xml')) {
+        if (isImgSvg(imgElement)) {
           return { type: 'img', element: imgElement };
         }
       }
@@ -356,12 +378,12 @@ const plugin: JupyterFrontEndPlugin<void> = {
         return { type: 'svg', element: svgElement as SVGElement };
       }
 
-      // Check descendants for IMG with SVG data URI (e.g. rendered SVG output)
-      const imgChild = target.querySelector(
-        'img[src^="data:image/svg+xml"]'
-      ) as HTMLImageElement | null;
-      if (imgChild) {
-        return { type: 'img', element: imgChild };
+      // Check descendants for IMG referencing SVG
+      const imgs = target.querySelectorAll('img');
+      for (let i = 0; i < imgs.length; i++) {
+        if (isImgSvg(imgs[i] as HTMLImageElement)) {
+          return { type: 'img', element: imgs[i] as HTMLImageElement };
+        }
       }
 
       return null;
@@ -419,18 +441,15 @@ const plugin: JupyterFrontEndPlugin<void> = {
       rank: 10
     });
     // Only register on markdown if mermaid extension doesn't already handle it
+    // Note: .jp-RenderedMarkdown always has .jp-RenderedHTMLCommon too, so we
+    // only register on one to avoid duplicate menu entries on the same element
     if (!hasMermaidExtension) {
       contextMenu.addItem({
         command: copySvgCommand,
-        selector: '.jp-RenderedMarkdown',
+        selector: '.jp-RenderedHTMLCommon',
         rank: 10
       });
     }
-    contextMenu.addItem({
-      command: copySvgCommand,
-      selector: '.jp-RenderedHTMLCommon',
-      rank: 10
-    });
 
     if (palette) {
       palette.addItem({
@@ -498,15 +517,10 @@ const plugin: JupyterFrontEndPlugin<void> = {
     if (!hasMermaidExtension) {
       contextMenu.addItem({
         command: downloadSvgCommand,
-        selector: '.jp-RenderedMarkdown',
+        selector: '.jp-RenderedHTMLCommon',
         rank: 11
       });
     }
-    contextMenu.addItem({
-      command: downloadSvgCommand,
-      selector: '.jp-RenderedHTMLCommon',
-      rank: 11
-    });
 
     if (palette) {
       palette.addItem({
