@@ -15,6 +15,10 @@ Copy or export any SVG graphic in JupyterLab as a high-quality PNG image. Right-
 
 **Full disclosure:** SVG is a perfectly fine format that nobody asked to be converted. But sometimes you need a PNG for a slide deck, a report, or that one colleague who insists on pasting images into Word documents. This extension won't judge. It just converts.
 
+![Context menu on an SVG inside a markdown file](.resources/screenshot-markdown-contextmenu.png)
+
+![Context menu on an SVG file opened directly in the image viewer](.resources/screenshot-svg-viewer-contextmenu.png)
+
 ## Features
 
 - **Copy SVG as PNG** - Right-click any SVG in a notebook output or document and copy it as a PNG to the clipboard
