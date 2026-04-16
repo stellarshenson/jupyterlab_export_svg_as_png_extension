@@ -11,8 +11,15 @@ import { ISettingRegistry } from '@jupyterlab/settingregistry';
  * to match the current JupyterLab theme. This ensures exported PNGs
  * reflect what the user sees, not the OS color scheme preference.
  */
-function resolveThemeStyles(svgElement: SVGElement): void {
-  const isDark = document.body.dataset.jpThemeLight === 'false';
+function resolveThemeStyles(svgElement: SVGElement, themeMode: string = 'system'): void {
+  let isDark: boolean;
+  if (themeMode === 'dark') {
+    isDark = true;
+  } else if (themeMode === 'light') {
+    isDark = false;
+  } else {
+    isDark = document.body.dataset.jpThemeLight === 'false';
+  }
   const styleElements = svgElement.querySelectorAll('style');
 
   styleElements.forEach(styleEl => {
@@ -67,13 +74,14 @@ async function svgToPng(
   svgElement: SVGElement,
   targetDPI: number = 300,
   backgroundColor: string = 'transparent',
+  themeMode: string = 'system',
   sourceImgElement?: HTMLImageElement
 ): Promise<Blob> {
   // Clone to avoid modifying the original DOM element
   const svgClone = svgElement.cloneNode(true) as SVGElement;
 
   // Resolve theme-dependent CSS so the export matches what the user sees
-  resolveThemeStyles(svgClone);
+  resolveThemeStyles(svgClone, themeMode);
 
   // Get SVG dimensions - prioritize element attributes over getBBox
   let width = 800;
@@ -176,7 +184,8 @@ async function svgToPng(
 async function imgToPng(
   imgElement: HTMLImageElement,
   targetDPI: number = 300,
-  backgroundColor: string = 'transparent'
+  backgroundColor: string = 'transparent',
+  themeMode: string = 'system'
 ): Promise<Blob> {
   const src = imgElement.src || '';
 
@@ -194,7 +203,7 @@ async function imgToPng(
   const svgElement = doc.documentElement as unknown as SVGElement;
 
   // Delegate to svgToPng which handles theme resolution and rendering
-  return svgToPng(svgElement, targetDPI, backgroundColor, imgElement);
+  return svgToPng(svgElement, targetDPI, backgroundColor, themeMode, imgElement);
 }
 
 /**
@@ -270,6 +279,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     // Settings
     let targetDPI = 300;
     let backgroundColor = 'transparent';
+    let exportThemeMode = 'system';
 
     const resolveBackgroundColor = (
       bgType: string,
@@ -295,6 +305,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
         const customBgColor = settings.get('customBackgroundColor')
           .composite as string;
         backgroundColor = resolveBackgroundColor(bgType, customBgColor);
+        exportThemeMode = settings.get('exportThemeMode').composite as string;
 
         settings.changed.connect(() => {
           targetDPI = settings.get('targetDPI').composite as number;
@@ -303,6 +314,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
           const customBgColor = settings.get('customBackgroundColor')
             .composite as string;
           backgroundColor = resolveBackgroundColor(bgType, customBgColor);
+          exportThemeMode = settings.get('exportThemeMode').composite as string;
         });
       } catch (error) {
         console.error('[SVG Extension] Failed to load settings:', error);
@@ -365,13 +377,15 @@ const plugin: JupyterFrontEndPlugin<void> = {
             pngBlob = await imgToPng(
               found.element,
               targetDPI,
-              backgroundColor
+              backgroundColor,
+              exportThemeMode
             );
           } else {
             pngBlob = await svgToPng(
               found.element,
               targetDPI,
-              backgroundColor
+              backgroundColor,
+              exportThemeMode
             );
           }
           await copyPngToClipboard(pngBlob);
@@ -433,7 +447,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
             pngBlob = await imgToPng(
               found.element,
               targetDPI,
-              backgroundColor
+              backgroundColor,
+              exportThemeMode
             );
           } else {
             svgData = new XMLSerializer().serializeToString(
@@ -442,7 +457,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
             pngBlob = await svgToPng(
               found.element,
               targetDPI,
-              backgroundColor
+              backgroundColor,
+              exportThemeMode
             );
           }
 

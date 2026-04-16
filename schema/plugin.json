@@ -25,6 +25,13 @@
       "description": "Hex color code for custom background (e.g., #ff0000 for red). Only used when Background Color is set to 'custom'.",
       "type": "string",
       "default": "#ffffff"
+    },
+    "exportThemeMode": {
+      "title": "Export Theme Mode",
+      "description": "Controls how theme-dependent SVG styles (prefers-color-scheme) are resolved during export. 'system' uses the current JupyterLab theme, 'light' forces light mode, 'dark' forces dark mode.",
+      "type": "string",
+      "default": "system",
+      "enum": ["system", "light", "dark"]
     }
   },
   "additionalProperties": false
