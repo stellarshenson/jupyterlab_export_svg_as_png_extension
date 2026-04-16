@@ -330,6 +330,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     });
 
     // Helper: find SVG element at the right-click location
+    // Searches the target itself, ancestors, and descendants
     const findSvgTarget = ():
       | { type: 'img'; element: HTMLImageElement }
       | { type: 'svg'; element: SVGElement }
@@ -337,9 +338,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
       if (!lastContextMenuTarget) {
         return null;
       }
-      const target = lastContextMenuTarget as HTMLElement;
+      const target = lastContextMenuTarget as Element;
 
-      // Check for IMG tag with SVG data URI
+      // Check if target is IMG with SVG data URI
       if (target.tagName === 'IMG') {
         const imgElement = target as HTMLImageElement;
         const src = imgElement.src || '';
@@ -348,20 +349,33 @@ const plugin: JupyterFrontEndPlugin<void> = {
         }
       }
 
-      // Check for inline SVG element
+      // Check target and ancestors for inline SVG, then descendants
       const svgElement =
         target.closest('svg') || target.querySelector('svg');
       if (svgElement) {
         return { type: 'svg', element: svgElement as SVGElement };
       }
 
+      // Check descendants for IMG with SVG data URI (e.g. rendered SVG output)
+      const imgChild = target.querySelector(
+        'img[src^="data:image/svg+xml"]'
+      ) as HTMLImageElement | null;
+      if (imgChild) {
+        return { type: 'img', element: imgChild };
+      }
+
       return null;
     };
 
-    // --- Copy SVG as PNG command ---
+    // Check if mermaid extension already provides these commands on markdown
+    const hasMermaidExtension =
+      commands.hasCommand('mermaid:copy-as-png') ||
+      commands.hasCommand('mermaid:download-as-png');
+
+    // --- Copy as PNG command ---
     const copySvgCommand = 'svg:copy-as-png';
     commands.addCommand(copySvgCommand, {
-      label: 'Copy SVG as PNG',
+      label: 'Copy as PNG',
       caption: 'Copy SVG graphic as PNG image to clipboard',
       isEnabled: () => findSvgTarget() !== null,
       execute: async () => {
@@ -404,11 +418,14 @@ const plugin: JupyterFrontEndPlugin<void> = {
       selector: '.jp-RenderedSVG',
       rank: 10
     });
-    contextMenu.addItem({
-      command: copySvgCommand,
-      selector: '.jp-RenderedMarkdown',
-      rank: 10
-    });
+    // Only register on markdown if mermaid extension doesn't already handle it
+    if (!hasMermaidExtension) {
+      contextMenu.addItem({
+        command: copySvgCommand,
+        selector: '.jp-RenderedMarkdown',
+        rank: 10
+      });
+    }
     contextMenu.addItem({
       command: copySvgCommand,
       selector: '.jp-RenderedHTMLCommon',
@@ -422,10 +439,10 @@ const plugin: JupyterFrontEndPlugin<void> = {
       });
     }
 
-    // --- Save SVG as PNG command ---
+    // --- Save as PNG command ---
     const downloadSvgCommand = 'svg:download-as-png';
     commands.addCommand(downloadSvgCommand, {
-      label: 'Save SVG as PNG',
+      label: 'Save as PNG',
       caption: 'Save SVG graphic as PNG file',
       isEnabled: () => findSvgTarget() !== null,
       execute: async () => {
@@ -478,11 +495,13 @@ const plugin: JupyterFrontEndPlugin<void> = {
       selector: '.jp-RenderedSVG',
       rank: 11
     });
-    contextMenu.addItem({
-      command: downloadSvgCommand,
-      selector: '.jp-RenderedMarkdown',
-      rank: 11
-    });
+    if (!hasMermaidExtension) {
+      contextMenu.addItem({
+        command: downloadSvgCommand,
+        selector: '.jp-RenderedMarkdown',
+        rank: 11
+      });
+    }
     contextMenu.addItem({
       command: downloadSvgCommand,
       selector: '.jp-RenderedHTMLCommon',
