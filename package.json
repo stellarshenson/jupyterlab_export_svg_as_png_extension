@@ -1,6 +1,6 @@
 {
     "name": "jupyterlab_export_svg_as_png_extension",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "description": "Jupyterlab extension to allow copying and exporting any given SVG graphics as PNG",
     "keywords": [
         "jupyter",

@@ -219,10 +219,14 @@ async function imgToPng(
 }
 
 /**
- * Copy PNG blob to clipboard
+ * Copy PNG blob to clipboard. The blob is wrapped in Promise.resolve
+ * because some browsers require this form when writing blobs created
+ * from canvas.toBlob() in an async chain.
  */
 async function copyPngToClipboard(blob: Blob): Promise<void> {
-  const clipboardItem = new ClipboardItem({ 'image/png': blob });
+  const clipboardItem = new ClipboardItem({
+    'image/png': Promise.resolve(blob)
+  });
   await navigator.clipboard.write([clipboardItem]);
 }
 
@@ -337,6 +341,21 @@ const plugin: JupyterFrontEndPlugin<void> = {
       lastContextMenuTarget = e.target;
     });
 
+    // Helper: find the tab label for a widget element. JupyterLab tabs
+    // are linked to their content widgets via `data-id` matching the
+    // MainAreaWidget's `id` attribute. This is more reliable than
+    // app.shell.currentWidget which depends on focus state.
+    const findTabLabel = (element: Element): string => {
+      const mainArea = element.closest('.jp-MainAreaWidget');
+      if (!mainArea || !mainArea.id) {
+        return '';
+      }
+      const tab = document.querySelector(
+        `.lm-TabBar-tab[data-id="${mainArea.id}"] .lm-TabBar-tabLabel`
+      );
+      return tab?.textContent || '';
+    };
+
     // Helper: check if an IMG element references an SVG
     const isImgSvg = (img: HTMLImageElement): boolean => {
       const src = img.src || '';
@@ -345,15 +364,14 @@ const plugin: JupyterFrontEndPlugin<void> = {
         return true;
       }
       // Blob URLs (used by JupyterLab's ImageViewer) - check if the IMG
-      // is inside an ImageViewer whose document path ends in .svg
+      // is inside an ImageViewer whose tab label ends in .svg
       if (src.startsWith('blob:')) {
         const viewer = img.closest('.jp-ImageViewer');
-        if (viewer) {
-          const widget = app.shell.currentWidget;
-          const title = (widget as any)?.title?.label || '';
-          return /\.svg$/i.test(title);
+        if (!viewer) {
+          return false;
         }
-        return false;
+        const label = findTabLabel(img);
+        return /\.svg$/i.test(label);
       }
       // HTTP URL SVGs (e.g. /files/path/to/image.svg?token=...)
       try {

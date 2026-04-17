@@ -129,3 +129,4 @@ dmypy.json
 
 # Ad-hoc screenshots from interactive testing (root only, not .resources/)
 /screenshot-*.png
+.playwright-mcp/
