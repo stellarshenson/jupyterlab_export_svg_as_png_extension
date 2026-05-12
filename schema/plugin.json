@@ -9,7 +9,7 @@
       "title": "Target Width (px)",
       "description": "Width in pixels for exported PNG images. Height is scaled proportionally to preserve the SVG's aspect ratio. Larger values produce sharper images. Common values: 1280 (HD), 1920 (Full HD), 2560 (2K/QHD), 3840 (4K).",
       "type": "number",
-      "default": 2560,
+      "default": 1920,
       "minimum": 64,
       "maximum": 8192
     },

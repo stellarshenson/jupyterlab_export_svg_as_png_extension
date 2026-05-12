@@ -77,7 +77,7 @@ function resolveThemeStyles(
  */
 async function svgToPng(
   svgElement: SVGElement,
-  targetWidth: number = 2560,
+  targetWidth: number = 1920,
   backgroundColor: string = 'transparent',
   themeMode: string = 'system',
   sourceImgElement?: HTMLImageElement
@@ -183,7 +183,7 @@ async function svgToPng(
  */
 async function imgToPng(
   imgElement: HTMLImageElement,
-  targetWidth: number = 2560,
+  targetWidth: number = 1920,
   backgroundColor: string = 'transparent',
   themeMode: string = 'system'
 ): Promise<Blob> {
@@ -290,7 +290,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     settingRegistry: ISettingRegistry | null
   ) => {
     // Settings
-    let targetWidth = 2560;
+    let targetWidth = 1920;
     let backgroundColor = 'transparent';
     let exportThemeMode = 'system';
 
