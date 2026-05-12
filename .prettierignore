@@ -4,3 +4,4 @@ node_modules
 **/package.json
 !/package.json
 jupyterlab_export_svg_as_png_extension
+.claude

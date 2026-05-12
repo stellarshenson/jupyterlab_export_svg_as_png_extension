@@ -5,13 +5,13 @@
   "jupyter.lab.setting-icon-label": "SVG to PNG",
   "type": "object",
   "properties": {
-    "targetDPI": {
-      "title": "Target DPI",
-      "description": "Resolution for exported PNG images (dots per inch). Higher values produce larger, higher-quality images suitable for printing. Standard values: 96 (screen), 150 (draft print), 300 (standard print), 600 (high-quality print), 1200 (professional print).",
+    "targetWidth": {
+      "title": "Target Width (px)",
+      "description": "Width in pixels for exported PNG images. Height is scaled proportionally to preserve the SVG's aspect ratio. Larger values produce sharper images. Common values: 1280 (HD), 1920 (Full HD), 2560 (2K/QHD), 3840 (4K).",
       "type": "number",
-      "default": 300,
-      "minimum": 72,
-      "maximum": 1200
+      "default": 2560,
+      "minimum": 64,
+      "maximum": 8192
     },
     "backgroundColor": {
       "title": "Background Color",

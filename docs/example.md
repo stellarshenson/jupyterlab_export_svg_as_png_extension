@@ -10,7 +10,7 @@ convertible since it is already a raster image.
 
 A standalone SVG file referenced by URL. The extension fetches the SVG
 content, resolves any `@media (prefers-color-scheme)` CSS based on the
-current JupyterLab theme, and renders it at the configured DPI.
+current JupyterLab theme, and renders it at the configured pixel width.
 
 ![Quarterly sales chart](example-chart.svg)
 

@@ -72,10 +72,12 @@ function resolveThemeStyles(
 /**
  * Convert SVG element to PNG blob using Canvas API.
  * Clones the SVG and resolves theme-dependent styles before rendering.
+ * The output width is fixed to `targetWidth`; height scales to preserve
+ * the SVG's aspect ratio.
  */
 async function svgToPng(
   svgElement: SVGElement,
-  targetDPI: number = 300,
+  targetWidth: number = 2560,
   backgroundColor: string = 'transparent',
   themeMode: string = 'system',
   sourceImgElement?: HTMLImageElement
@@ -86,7 +88,7 @@ async function svgToPng(
   // Resolve theme-dependent CSS so the export matches what the user sees
   resolveThemeStyles(svgClone, themeMode);
 
-  // Get SVG dimensions - prioritize element attributes over getBBox
+  // Get SVG source dimensions - prioritize element attributes over getBBox
   let width = 800;
   let height = 600;
 
@@ -129,14 +131,12 @@ async function svgToPng(
     }
   }
 
-  // Create high-resolution canvas at target DPI
-  // SVG native resolution calibrated to match Adobe converter output
-  const sourceDPI = 11.5;
-  const scale = targetDPI / sourceDPI;
+  // Scale the canvas so its width equals targetWidth, preserving aspect ratio
+  const scale = targetWidth / width;
 
   const canvas = document.createElement('canvas');
-  canvas.width = width * scale;
-  canvas.height = height * scale;
+  canvas.width = targetWidth;
+  canvas.height = Math.round(height * scale);
 
   const ctx = canvas.getContext('2d', { alpha: true });
   if (!ctx) {
@@ -183,7 +183,7 @@ async function svgToPng(
  */
 async function imgToPng(
   imgElement: HTMLImageElement,
-  targetDPI: number = 300,
+  targetWidth: number = 2560,
   backgroundColor: string = 'transparent',
   themeMode: string = 'system'
 ): Promise<Blob> {
@@ -211,7 +211,7 @@ async function imgToPng(
   // Delegate to svgToPng which handles theme resolution and rendering
   return svgToPng(
     svgElement,
-    targetDPI,
+    targetWidth,
     backgroundColor,
     themeMode,
     imgElement
@@ -290,7 +290,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     settingRegistry: ISettingRegistry | null
   ) => {
     // Settings
-    let targetDPI = 300;
+    let targetWidth = 2560;
     let backgroundColor = 'transparent';
     let exportThemeMode = 'system';
 
@@ -313,21 +313,16 @@ const plugin: JupyterFrontEndPlugin<void> = {
     if (settingRegistry) {
       try {
         const settings = await settingRegistry.load(plugin.id);
-        targetDPI = settings.get('targetDPI').composite as number;
-        const bgType = settings.get('backgroundColor').composite as string;
-        const customBgColor = settings.get('customBackgroundColor')
-          .composite as string;
-        backgroundColor = resolveBackgroundColor(bgType, customBgColor);
-        exportThemeMode = settings.get('exportThemeMode').composite as string;
-
-        settings.changed.connect(() => {
-          targetDPI = settings.get('targetDPI').composite as number;
+        const applySettings = () => {
+          targetWidth = settings.get('targetWidth').composite as number;
           const bgType = settings.get('backgroundColor').composite as string;
           const customBgColor = settings.get('customBackgroundColor')
             .composite as string;
           backgroundColor = resolveBackgroundColor(bgType, customBgColor);
           exportThemeMode = settings.get('exportThemeMode').composite as string;
-        });
+        };
+        applySettings();
+        settings.changed.connect(applySettings);
       } catch (error) {
         console.error('[SVG Extension] Failed to load settings:', error);
       }
@@ -468,14 +463,14 @@ const plugin: JupyterFrontEndPlugin<void> = {
           if (found.type === 'img') {
             pngBlob = await imgToPng(
               found.element,
-              targetDPI,
+              targetWidth,
               backgroundColor,
               exportThemeMode
             );
           } else {
             pngBlob = await svgToPng(
               found.element,
-              targetDPI,
+              targetWidth,
               backgroundColor,
               exportThemeMode
             );
@@ -541,7 +536,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
             );
             pngBlob = await imgToPng(
               found.element,
-              targetDPI,
+              targetWidth,
               backgroundColor,
               exportThemeMode
             );
@@ -549,7 +544,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
             svgData = new XMLSerializer().serializeToString(found.element);
             pngBlob = await svgToPng(
               found.element,
-              targetDPI,
+              targetWidth,
               backgroundColor,
               exportThemeMode
             );
