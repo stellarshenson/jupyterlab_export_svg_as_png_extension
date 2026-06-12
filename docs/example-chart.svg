@@ -16,7 +16,7 @@
     }
   </style>
   <rect class="bg" width="400" height="260"/>
-  <text class="title" x="200" y="22" text-anchor="middle">Quarterly Sales</text>
+  <text class="title" x="200" y="22" text-anchor="middle">Quarterly Sales — €45 → €80</text>
   <line class="axis" x1="50" y1="220" x2="380" y2="220"/>
   <line class="axis" x1="50" y1="50" x2="50" y2="220"/>
   <rect class="bar" x="80" y="130" width="50" height="90"/>

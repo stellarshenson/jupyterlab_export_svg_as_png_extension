@@ -178,8 +178,11 @@ async function svgToPng(
 
 /**
  * Convert IMG element referencing SVG to PNG.
- * Handles both data URI SVGs and HTTP URL SVGs.
- * Fetches/extracts the SVG, resolves theme styles, and renders via svgToPng.
+ * Handles data URI SVGs (base64 or url-encoded), blob URLs, and HTTP URLs.
+ * Always fetches the source - the Fetch API natively decodes every URL
+ * form into correct UTF-8 text, avoiding the encoding pitfalls of manual
+ * atob/decodeURIComponent (which break on multibyte characters such as
+ * arrows or accented letters embedded in the SVG).
  */
 async function imgToPng(
   imgElement: HTMLImageElement,
@@ -189,19 +192,8 @@ async function imgToPng(
 ): Promise<Blob> {
   const src = imgElement.src || '';
 
-  let svgText: string;
-  if (src.startsWith('data:image/svg+xml')) {
-    // Extract SVG text from data URI
-    if (src.includes(';base64,')) {
-      svgText = atob(src.split(';base64,')[1]);
-    } else {
-      svgText = decodeURIComponent(src.split(',').slice(1).join(','));
-    }
-  } else {
-    // Fetch SVG from HTTP URL (same-origin, e.g. JupyterHub /files/ endpoint)
-    const response = await fetch(src);
-    svgText = await response.text();
-  }
+  const response = await fetch(src);
+  const svgText = await response.text();
 
   // Parse as SVG DOM element for theme resolution
   const parser = new DOMParser();
@@ -219,13 +211,17 @@ async function imgToPng(
 }
 
 /**
- * Copy PNG blob to clipboard. The blob is wrapped in Promise.resolve
- * because some browsers require this form when writing blobs created
- * from canvas.toBlob() in an async chain.
+ * Copy a PNG to the clipboard, given a promise that resolves to the blob.
+ *
+ * The ClipboardItem is constructed with the *promise* (not an already
+ * resolved blob) and `navigator.clipboard.write()` is invoked immediately.
+ * This keeps the write call inside the originating user gesture so the
+ * browser does not reject it with "Document is not focused" - the blob is
+ * allowed to resolve asynchronously after the write has been initiated.
  */
-async function copyPngToClipboard(blob: Blob): Promise<void> {
+async function copyPngToClipboard(blobPromise: Promise<Blob>): Promise<void> {
   const clipboardItem = new ClipboardItem({
-    'image/png': Promise.resolve(blob)
+    'image/png': blobPromise
   });
   await navigator.clipboard.write([clipboardItem]);
 }
@@ -459,23 +455,24 @@ const plugin: JupyterFrontEndPlugin<void> = {
             return;
           }
 
-          let pngBlob: Blob;
-          if (found.type === 'img') {
-            pngBlob = await imgToPng(
-              found.element,
-              targetWidth,
-              backgroundColor,
-              exportThemeMode
-            );
-          } else {
-            pngBlob = await svgToPng(
-              found.element,
-              targetWidth,
-              backgroundColor,
-              exportThemeMode
-            );
-          }
-          await copyPngToClipboard(pngBlob);
+          // Start the conversion but do NOT await it here - hand the promise
+          // straight to the clipboard so the write is initiated synchronously
+          // within the user gesture (avoids "Document is not focused").
+          const blobPromise =
+            found.type === 'img'
+              ? imgToPng(
+                  found.element,
+                  targetWidth,
+                  backgroundColor,
+                  exportThemeMode
+                )
+              : svgToPng(
+                  found.element,
+                  targetWidth,
+                  backgroundColor,
+                  exportThemeMode
+                );
+          await copyPngToClipboard(blobPromise);
         } catch (error) {
           console.error('[SVG Extension] Error copying SVG as PNG:', error);
         }
@@ -527,13 +524,13 @@ const plugin: JupyterFrontEndPlugin<void> = {
           }
 
           let pngBlob: Blob;
-          let svgData: string;
+          // Hash source used only to derive a deterministic filename. Use the
+          // raw src for IMG (never throws, unlike decodeURIComponent on a
+          // malformed escape) and the serialized markup for inline SVG.
+          let hashSource: string;
 
           if (found.type === 'img') {
-            const src = found.element.src || '';
-            svgData = decodeURIComponent(
-              src.replace('data:image/svg+xml,', '')
-            );
+            hashSource = found.element.src || '';
             pngBlob = await imgToPng(
               found.element,
               targetWidth,
@@ -541,7 +538,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
               exportThemeMode
             );
           } else {
-            svgData = new XMLSerializer().serializeToString(found.element);
+            hashSource = new XMLSerializer().serializeToString(found.element);
             pngBlob = await svgToPng(
               found.element,
               targetWidth,
@@ -550,7 +547,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
             );
           }
 
-          const filename = generateFilename(app, svgData);
+          const filename = generateFilename(app, hashSource);
           downloadPng(pngBlob, filename);
         } catch (error) {
           console.error('[SVG Extension] Error saving SVG as PNG:', error);
