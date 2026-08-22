@@ -3,7 +3,8 @@ import {
   JupyterFrontEndPlugin
 } from '@jupyterlab/application';
 
-import { ICommandPalette } from '@jupyterlab/apputils';
+import { Notification } from '@jupyterlab/apputils';
+
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
 
 /**
@@ -105,9 +106,13 @@ async function svgToPng(
     const widthAttr = svgElement.getAttribute('width');
     const heightAttr = svgElement.getAttribute('height');
 
-    if (widthAttr && heightAttr) {
-      width = parseFloat(widthAttr.replace(/[^\d.]/g, ''));
-      height = parseFloat(heightAttr.replace(/[^\d.]/g, ''));
+    // `100%` is the standard responsive-SVG idiom; stripping its unit yields
+    // 100x100 and a square export, so only a unitless or px value is a size.
+    // Anything else falls through to the viewBox, which is already correct.
+    const PX = /^\s*[\d.]+(px)?\s*$/;
+    if (widthAttr && heightAttr && PX.test(widthAttr) && PX.test(heightAttr)) {
+      width = parseFloat(widthAttr);
+      height = parseFloat(heightAttr);
     } else {
       // Try viewBox
       const viewBox = svgElement.getAttribute('viewBox');
@@ -272,6 +277,15 @@ function downloadPng(blob: Blob, filename: string = 'svg-graphic.png'): void {
 }
 
 /**
+ * Containers JupyterLab builds to hold a single graphic. A click inside one of
+ * these that misses the graphic itself still resolves to it. `.jp-RenderedMarkdown`
+ * is deliberately not here - it holds a whole document. Nor is `figure`: HTML
+ * groups tables, listings and quotations in one too, so its contract is unknown.
+ */
+const SINGLE_GRAPHIC_HOLDERS =
+  '.jp-RenderedSVG, .jp-RenderedMermaid, .jp-ImageViewer';
+
+/**
  * Initialization data for the jupyterlab_export_svg_as_png_extension extension.
  */
 const plugin: JupyterFrontEndPlugin<void> = {
@@ -279,10 +293,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
   description:
     'Jupyterlab extension to allow copying and exporting any given SVG graphics as PNG',
   autoStart: true,
-  optional: [ICommandPalette, ISettingRegistry],
+  optional: [ISettingRegistry],
   activate: async (
     app: JupyterFrontEnd,
-    palette: ICommandPalette | null,
     settingRegistry: ISettingRegistry | null
   ) => {
     // Settings
@@ -326,10 +339,27 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
     const { commands, contextMenu } = app;
 
-    // Track last right-click target
+    // The document widget an element belongs to. This is what separates a
+    // graphic that re-rendered in place from one whose document has been
+    // closed: the first keeps its widget id, the second is replaced by
+    // whatever the shell now puts in that screen position.
+    const widgetIdOf = (element: Element): string =>
+      element.closest('.jp-MainAreaWidget')?.id ?? '';
+
+    // Track the last right-click - the element, the point, and the document it
+    // belonged to. The point is what keeps the gesture alive when the graphic
+    // re-renders while the menu is open: Lumino evaluates isVisible once, when
+    // the menu opens, but the command re-resolves when the item is clicked.
     let lastContextMenuTarget: EventTarget | null = null;
+    let lastContextMenuPoint: { x: number; y: number } | null = null;
+    let lastContextMenuWidgetId = '';
+    let lastResolvedKey: string | null = null;
     document.addEventListener('contextmenu', (e: MouseEvent) => {
       lastContextMenuTarget = e.target;
+      lastContextMenuPoint = { x: e.clientX, y: e.clientY };
+      lastContextMenuWidgetId =
+        e.target instanceof Element ? widgetIdOf(e.target) : '';
+      lastResolvedKey = null;
     });
 
     // Helper: find the tab label for a widget element. JupyterLab tabs
@@ -349,6 +379,12 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
     // Helper: check if an IMG element references an SVG
     const isImgSvg = (img: HTMLImageElement): boolean => {
+      // An image that failed to load, or has not loaded yet, cannot be
+      // exported. Without this a broken src is offered in the menu and then
+      // fails at click time with nothing to show for it.
+      if (!img.complete || img.naturalWidth === 0) {
+        return false;
+      }
       const src = img.src || '';
       // Data URI SVGs
       if (src.startsWith('data:image/svg+xml')) {
@@ -367,77 +403,136 @@ const plugin: JupyterFrontEndPlugin<void> = {
       // HTTP URL SVGs (e.g. /files/path/to/image.svg?token=...)
       try {
         const url = new URL(src);
-        return url.pathname.endsWith('.svg');
+        return /\.svg$/i.test(url.pathname);
       } catch {
-        return src.includes('.svg');
+        return /\.svg/i.test(src);
       }
     };
 
-    // Helper: find SVG element at the right-click location
-    // Searches the target itself, ancestors, and descendants
-    const findSvgTarget = ():
-      | { type: 'img'; element: HTMLImageElement }
-      | { type: 'svg'; element: SVGElement }
-      | null => {
-      if (!lastContextMenuTarget) {
-        return null;
+    // The outermost <svg> containing an element. `closest('svg')` returns the
+    // innermost, but a nested viewport is part of one graphic, not a graphic of
+    // its own - the same premise the holder count uses (DEF-9). Without this the
+    // two branches disagree on the same DOM.
+    const outermostSvg = (element: Element): SVGElement | null => {
+      let svg = element.closest('svg');
+      for (;;) {
+        const outer = svg?.parentElement?.closest('svg');
+        if (!outer) {
+          break;
+        }
+        svg = outer;
       }
-      const target = lastContextMenuTarget as Element;
+      return (svg as SVGElement | null) ?? null;
+    };
 
-      // Check if target is IMG referencing SVG (data URI or HTTP URL)
+    type SvgTarget =
+      | { type: 'img'; element: HTMLImageElement }
+      | { type: 'svg'; element: SVGElement };
+
+    // Helper: resolve the graphic for one element.
+    // An element that is a graphic resolves to that graphic and stops there.
+    // Anything else resolves only through its ancestors, and then only inside a
+    // container JupyterLab builds to hold one graphic - see
+    // SINGLE_GRAPHIC_HOLDERS. Everything else resolves to nothing.
+    const resolveFrom = (target: Element): SvgTarget | null => {
+      // The click landed on an image. That image is the answer; failing that,
+      // only an <svg> it sits inside - a raster in a <foreignObject> is part of
+      // that graphic. It must never fall through to the holder search below,
+      // which would offer the image's neighbour instead: a right-click on a PNG
+      // returning the SVG beside it in the same <figure>.
       if (target.tagName === 'IMG') {
         const imgElement = target as HTMLImageElement;
         if (isImgSvg(imgElement)) {
           return { type: 'img', element: imgElement };
         }
+        const owner = outermostSvg(imgElement);
+        return owner ? { type: 'svg', element: owner } : null;
       }
 
-      // Check target and ancestors for inline SVG, then descendants
-      const svgElement = target.closest('svg') || target.querySelector('svg');
+      // Check target and ancestors for inline SVG
+      const svgElement = outermostSvg(target);
       if (svgElement) {
-        return { type: 'svg', element: svgElement as SVGElement };
+        return { type: 'svg', element: svgElement };
       }
 
-      // Check descendants for IMG referencing SVG
-      const imgs = target.querySelectorAll('img');
-      for (let i = 0; i < imgs.length; i++) {
-        if (isImgSvg(imgs[i] as HTMLImageElement)) {
-          return { type: 'img', element: imgs[i] as HTMLImageElement };
+      // A click that misses the graphic but lands in a container built to hold
+      // exactly one - the image viewer panel, a notebook output box, a mermaid
+      // wrapper - still resolves to that graphic. `.jp-RenderedMarkdown` is
+      // deliberately absent: it holds a whole document, so searching it would
+      // export an unrelated graphic from elsewhere on the page.
+      const holder = target.closest(SINGLE_GRAPHIC_HOLDERS);
+      if (holder) {
+        // Nested <svg> is a legal viewport, not a second graphic, so count only
+        // the outermost ones. Inline SVG and SVG images are counted together:
+        // a caption icon beside the real figure must read as two, not win as
+        // the sole <svg> and be exported in the figure's place.
+        const svgs = Array.from(holder.querySelectorAll('svg')).filter(
+          el => !el.parentElement?.closest('svg')
+        );
+        const imgs = Array.from(holder.querySelectorAll('img')).filter(
+          isImgSvg
+        );
+        if (svgs.length + imgs.length === 1) {
+          return svgs.length === 1
+            ? { type: 'svg', element: svgs[0] as SVGElement }
+            : { type: 'img', element: imgs[0] };
         }
       }
 
       return null;
     };
 
-    // Check if mermaid extension provides these commands on markdown.
-    // Mermaid's menu items are enabled only on mermaid diagrams - on other
-    // SVG content they appear grayed out. We detect this to skip our own
-    // markdown registration and avoid showing duplicate entries.
-    const hasMermaidExtension = (): boolean =>
-      commands.hasCommand('mermaid:copy-as-png') ||
-      commands.hasCommand('mermaid:download-as-png');
+    // Identity of a resolved graphic, so the fallback below can tell the same
+    // graphic from merely another one in the same place.
+    const keyOf = (found: SvgTarget): string =>
+      found.type === 'img'
+        ? `img:${found.element.src}`
+        : `svg:${found.element.outerHTML}`;
 
-    // Check if right-click target is inside rendered markdown
-    const isInMarkdownContext = (): boolean => {
-      if (!lastContextMenuTarget) {
-        return false;
+    // Helper: find the SVG graphic under the right-click point.
+    const findSvgTarget = (): SvgTarget | null => {
+      if (
+        lastContextMenuTarget instanceof Element &&
+        lastContextMenuTarget.isConnected
+      ) {
+        const found = resolveFrom(lastContextMenuTarget);
+        lastResolvedKey = found ? keyOf(found) : null;
+        return found;
       }
-      return !!(lastContextMenuTarget as Element).closest(
-        '.jp-RenderedMarkdown'
-      );
+
+      // The recorded node has left the DOM. Either the graphic re-rendered
+      // under the open menu, in which case its replacement is at the same
+      // point, or its document is gone and the point now shows something else.
+      if (!lastContextMenuPoint || !lastResolvedKey) {
+        return null;
+      }
+      // `elementsFromPoint`, not `elementFromPoint`: the context menu opens at
+      // the pointer, so the topmost element at the recorded point may be the
+      // menu itself. Take the first thing underneath it.
+      const atPoint = document
+        .elementsFromPoint(lastContextMenuPoint.x, lastContextMenuPoint.y)
+        .find(el => !el.closest('.lm-Menu'));
+      if (!atPoint || widgetIdOf(atPoint) !== lastContextMenuWidgetId) {
+        return null;
+      }
+      // Same document is not enough. A re-render that also changes layout puts
+      // a *different* graphic under the recorded point, and exporting that
+      // would be the silent wrong export this whole fallback must not cause.
+      // Only the same graphic, by identity, counts.
+      const found = resolveFrom(atPoint);
+      return found && keyOf(found) === lastResolvedKey ? found : null;
     };
 
-    // Our items should be hidden (not just disabled) when either there is
-    // nothing to export, or when the mermaid extension would show its own
-    // entry for the same context
-    const shouldShow = (): boolean => {
-      if (findSvgTarget() === null) {
-        return false;
-      }
-      if (hasMermaidExtension() && isInMarkdownContext()) {
-        return false;
-      }
-      return true;
+    // Our items are hidden (not just disabled) when there is nothing to
+    // export at the click point
+    const shouldShow = (): boolean => findSvgTarget() !== null;
+
+    // The user asked for a PNG and did not get one. A console line is not an
+    // answer - a source the exporter cannot read (a cross-origin badge, a 404)
+    // would otherwise look like a menu item that does nothing.
+    const fail = (message: string, error?: unknown): void => {
+      console.error(`[SVG Extension] ${message}`, error ?? '');
+      Notification.error(message, { autoClose: 4000 });
     };
 
     // --- Copy as PNG command ---
@@ -451,7 +546,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
         try {
           const found = findSvgTarget();
           if (!found) {
-            console.error('[SVG Extension] No SVG element found');
+            // the graphic went away between the menu opening and this click
+            fail('The graphic is no longer available');
             return;
           }
 
@@ -474,7 +570,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
                 );
           await copyPngToClipboard(blobPromise);
         } catch (error) {
-          console.error('[SVG Extension] Error copying SVG as PNG:', error);
+          fail('Could not copy this graphic as PNG', error);
         }
       }
     });
@@ -482,9 +578,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
     // Register context menu for SVG-containing areas.
     // Note: .jp-RenderedMarkdown always has .jp-RenderedHTMLCommon too, so
     // registering on only one selector avoids duplicate entries on the same
-    // element. The command's isVisible handles the mermaid conflict case.
-    // .jp-ImageViewer covers SVG files opened directly (isImgSvg filters by
-    // document extension to avoid showing on PNG/JPEG files).
+    // element. .jp-ImageViewer covers SVG files opened directly (isImgSvg
+    // filters by document extension to avoid showing on PNG/JPEG files).
     contextMenu.addItem({
       command: copySvgCommand,
       selector: '.jp-RenderedSVG',
@@ -501,13 +596,6 @@ const plugin: JupyterFrontEndPlugin<void> = {
       rank: 10
     });
 
-    if (palette) {
-      palette.addItem({
-        command: copySvgCommand,
-        category: 'SVG Export'
-      });
-    }
-
     // --- Save as PNG command ---
     const downloadSvgCommand = 'svg:download-as-png';
     commands.addCommand(downloadSvgCommand, {
@@ -519,7 +607,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
         try {
           const found = findSvgTarget();
           if (!found) {
-            console.error('[SVG Extension] No SVG element found');
+            // the graphic went away between the menu opening and this click
+            fail('The graphic is no longer available');
             return;
           }
 
@@ -550,7 +639,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
           const filename = generateFilename(app, hashSource);
           downloadPng(pngBlob, filename);
         } catch (error) {
-          console.error('[SVG Extension] Error saving SVG as PNG:', error);
+          fail('Could not save this graphic as PNG', error);
         }
       }
     });
@@ -570,13 +659,6 @@ const plugin: JupyterFrontEndPlugin<void> = {
       selector: '.jp-ImageViewer',
       rank: 11
     });
-
-    if (palette) {
-      palette.addItem({
-        command: downloadSvgCommand,
-        category: 'SVG Export'
-      });
-    }
 
     console.log(
       'JupyterLab extension jupyterlab_export_svg_as_png_extension is activated!'

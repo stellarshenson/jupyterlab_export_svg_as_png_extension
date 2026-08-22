@@ -18,6 +18,21 @@ The default configuration will produce video for failing tests and an HTML repor
 
 > All commands are assumed to be executed from the root directory
 
+> [!IMPORTANT]
+> The test server pins its port and does not fall back, and the suite never
+> adopts a server it did not start. If you have your own JupyterLab on 8888,
+> set `JUPYTER_TEST_PORT` to a free port - it is read by both
+> `playwright.config.js` and `jupyter_server_test_config.py`:
+>
+> ```sh
+> JUPYTER_TEST_PORT=8899 jlpm playwright test
+> ```
+>
+> The suite also runs against whatever labextensions the ambient Python
+> environment has installed, while CI installs only this wheel plus core. Tests
+> are written to be immune to that difference; keep them that way by scoping
+> DOM selectors to the main area and matching menu items by command id.
+
 To run the tests, you need to:
 
 1. Compile the extension:
@@ -122,7 +137,7 @@ jlpm start
 
 ```sh
 cd ./ui-tests
-jlpm playwright codegen localhost:8888
+jlpm playwright codegen localhost:${JUPYTER_TEST_PORT:-8888}
 ```
 
 ## Debug tests

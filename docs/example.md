@@ -18,9 +18,9 @@ Right-click the chart above to export it as PNG.
 
 ## 2. Mermaid diagram
 
-Inline Mermaid diagram rendered by JupyterLab. Mermaid diagrams are
-rendered as inline SVG in the DOM, so the extension can export them
-just like any other SVG.
+Inline Mermaid diagram rendered by JupyterLab. Core renders mermaid as an
+`<img>` holding a URL-encoded SVG data URI, which the extension fetches and
+converts like any other SVG source.
 
 ```mermaid
 flowchart LR

@@ -726,7 +726,7 @@ The following workspace rules are STRICTLY ENFORCED for this project:
 
 **MANDATORY at session start**: Compare local `Makefile` version (line 1 comment) with the shared Makefile at `/home/lab/workspace/private/jupyterlab/@utils/jupyterlab-extensions/Makefile`. If the shared version is newer, copy it over the local Makefile immediately before any other work.
 
-Current local version: 1.31
+Current local version: 1.37
 Shared Makefile path: `/home/lab/workspace/private/jupyterlab/@utils/jupyterlab-extensions/Makefile`
 
 ## Required Workspace Skills

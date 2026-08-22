@@ -1,4 +1,4 @@
-import { expect, test } from '@jupyterlab/galata';
+import { expect, test } from './galata';
 
 /**
  * Don't load JupyterLab webpage before running the tests.
