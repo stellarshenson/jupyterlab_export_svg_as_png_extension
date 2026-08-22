@@ -3,6 +3,14 @@
 All notable changes to this project are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.14] - 2026-08-22
+
+### Fixed
+
+- `Check Links` CI job no longer fails on the integration-test fixtures. The fixture proving an unreadable image is not offered for export pointed at a file that deliberately did not exist, and the link checker walks HTML `img src` inside markdown; it now points at a committed file that is not parseable as SVG, so the image still fails to load and the test asserts the same behaviour against a link that resolves
+
+This release carries no change to the extension itself - the published code is identical to 1.1.13.
+
 ## [1.1.13] - 2026-08-22
 
 ### Fixed
