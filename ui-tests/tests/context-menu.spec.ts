@@ -423,6 +423,7 @@ test.describe('figure holding two images', () => {
 test.describe('image sources', () => {
   test.beforeEach(async ({ page, tmpPath }) => {
     await upload(page, tmpPath, 'upper.SVG');
+    await upload(page, tmpPath, 'unreadable.svg');
     await upload(page, tmpPath, 'sources.md');
     await page.filebrowser.open(`${tmpPath}/sources.md`, 'Markdown Preview');
     await page.locator(`${DOC} img[src*="upper.SVG"]`).waitFor();
@@ -430,9 +431,11 @@ test.describe('image sources', () => {
 
   test('hides both items on a source that failed to load', async ({ page }) => {
     // offering a broken source means a menu item that fails at click time -
-    // the item is only worth showing for something the exporter can read
+    // the item is only worth showing for something the exporter can read.
+    // unreadable.svg is served but is not parseable as SVG, so it loads with
+    // naturalWidth 0 - a real path, so the repo's link check stays green
     await page
-      .locator(`${DOC} img[src*="missing.svg"]`)
+      .locator(`${DOC} img[src*="unreadable.svg"]`)
       .click({ button: 'right' });
 
     await expectHidden(page);

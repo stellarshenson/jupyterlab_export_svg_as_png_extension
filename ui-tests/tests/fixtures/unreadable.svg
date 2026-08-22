@@ -1,0 +1,3 @@
+this file is deliberately not valid SVG. it exists so the fixture's <img>
+resolves to a real path, and its content fails to decode, so the image
+loads with naturalWidth 0 - the state DEF-15 requires the menu to refuse.
