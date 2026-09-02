@@ -184,21 +184,24 @@ async function svgToPng(
 /**
  * Convert IMG element referencing SVG to PNG.
  * Handles data URI SVGs (base64 or url-encoded), blob URLs, and HTTP URLs.
- * Always fetches the source - the Fetch API natively decodes every URL
- * form into correct UTF-8 text, avoiding the encoding pitfalls of manual
+ * Fetches the source - the Fetch API natively decodes every URL form into
+ * correct UTF-8 text, avoiding the encoding pitfalls of manual
  * atob/decodeURIComponent (which break on multibyte characters such as
  * arrows or accented letters embedded in the SVG).
+ *
+ * `source` short-circuits that fetch with markup the caller already holds. It
+ * is what makes the image viewer exportable at all: that viewer revokes its
+ * blob URL inside the image's own load handler, so the URL is dead before the
+ * graphic is even on screen and fetching it throws (DEF-19).
  */
 async function imgToPng(
   imgElement: HTMLImageElement,
   targetWidth: number = 1920,
   backgroundColor: string = 'transparent',
-  themeMode: string = 'system'
+  themeMode: string = 'system',
+  source?: string
 ): Promise<Blob> {
-  const src = imgElement.src || '';
-
-  const response = await fetch(src);
-  const svgText = await response.text();
+  const svgText = source ?? (await (await fetch(imgElement.src || '')).text());
 
   // Parse as SVG DOM element for theme resolution
   const parser = new DOMParser();
@@ -362,6 +365,15 @@ const plugin: JupyterFrontEndPlugin<void> = {
       lastResolvedKey = null;
     });
 
+    // The identity key is only wanted between the menu opening and the click.
+    // Since `keyOf` began carrying a whole document's text, holding it past the
+    // gesture keeps a large SVG file reachable until the user happens to
+    // right-click again - the retention shape DEF-4 was filed for. Both
+    // commands drop it when they finish.
+    const endGesture = (): void => {
+      lastResolvedKey = null;
+    };
+
     // Helper: find the tab label for a widget element. JupyterLab tabs
     // are linked to their content widgets via `data-id` matching the
     // MainAreaWidget's `id` attribute. This is more reliable than
@@ -375,6 +387,34 @@ const plugin: JupyterFrontEndPlugin<void> = {
         `.lm-TabBar-tab[data-id="${mainArea.id}"] .lm-TabBar-tabLabel`
       );
       return tab?.textContent || '';
+    };
+
+    // The text of the document an element belongs to, or null when there is
+    // none to read. JupyterLab 4.6 changed the image viewer to revoke its blob
+    // URL in the image's own `load` handler, so by the time a graphic can be
+    // right-clicked its URL is already out of the blob registry and `fetch`
+    // rejects with `TypeError: Failed to fetch` (DEF-19). The document model
+    // holds the same bytes, is what the viewer itself renders from, and
+    // outlives the URL.
+    //
+    // This returns whatever the owning document's model stringifies to, which
+    // is the file's markup only because of who calls it: `isImgSvg` below
+    // admits a `blob:` source only inside a `.jp-ImageViewer` whose tab label
+    // ends in `.svg`, so the widget found here is always an image viewer over
+    // an SVG file. That gate is load-bearing - relaxing it would let a
+    // notebook's `.ipynb` JSON through as if it were SVG markup.
+    const documentSourceOf = (element: Element): string | null => {
+      const id = widgetIdOf(element);
+      if (!id) {
+        return null;
+      }
+      for (const widget of app.shell.widgets('main')) {
+        if (widget.id === id) {
+          const text = (widget as any)?.context?.model?.toString?.();
+          return typeof text === 'string' && text.length > 0 ? text : null;
+        }
+      }
+      return null;
     };
 
     // Helper: check if an IMG element references an SVG
@@ -426,8 +466,28 @@ const plugin: JupyterFrontEndPlugin<void> = {
     };
 
     type SvgTarget =
-      | { type: 'img'; element: HTMLImageElement }
+      | { type: 'img'; element: HTMLImageElement; source?: string }
       | { type: 'svg'; element: SVGElement };
+
+    // An SVG image as an export target, or null when its markup cannot be
+    // read. An image whose markup cannot be read is not offered at all,
+    // because offering it means a menu item that fails at click time.
+    //
+    // The discriminator is the URL scheme, and it must stay that way. A
+    // `blob:` source arises only from `ImageViewer._render`'s non-base64
+    // branch, which builds the Blob from the very string `documentSourceOf`
+    // reads back - that is what makes the model the right source for it.
+    // JupyterLab registers a second, base64 factory for `.svg` (Open With ->
+    // Image), and that one sets a `data:` src over a base64 model: widening
+    // this test to the container would hand that base64 to the SVG parser.
+    // Every non-blob form is read back from its own URL at export time.
+    const imgTarget = (element: HTMLImageElement): SvgTarget | null => {
+      if (!(element.src || '').startsWith('blob:')) {
+        return { type: 'img', element };
+      }
+      const source = documentSourceOf(element);
+      return source ? { type: 'img', element, source } : null;
+    };
 
     // Helper: resolve the graphic for one element.
     // An element that is a graphic resolves to that graphic and stops there.
@@ -443,7 +503,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
       if (target.tagName === 'IMG') {
         const imgElement = target as HTMLImageElement;
         if (isImgSvg(imgElement)) {
-          return { type: 'img', element: imgElement };
+          return imgTarget(imgElement);
         }
         const owner = outermostSvg(imgElement);
         return owner ? { type: 'svg', element: owner } : null;
@@ -475,7 +535,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
         if (svgs.length + imgs.length === 1) {
           return svgs.length === 1
             ? { type: 'svg', element: svgs[0] as SVGElement }
-            : { type: 'img', element: imgs[0] };
+            : imgTarget(imgs[0]);
         }
       }
 
@@ -484,9 +544,12 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
     // Identity of a resolved graphic, so the fallback below can tell the same
     // graphic from merely another one in the same place.
+    // The document text, where there is one, rather than the URL: the image
+    // viewer mints a fresh `blob:` URL on every render, so a URL key would call
+    // the same unchanged graphic a different one after any re-render.
     const keyOf = (found: SvgTarget): string =>
       found.type === 'img'
-        ? `img:${found.element.src}`
+        ? `img:${found.source ?? found.element.src}`
         : `svg:${found.element.outerHTML}`;
 
     // Helper: find the SVG graphic under the right-click point.
@@ -560,7 +623,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
                   found.element,
                   targetWidth,
                   backgroundColor,
-                  exportThemeMode
+                  exportThemeMode,
+                  found.source
                 )
               : svgToPng(
                   found.element,
@@ -571,6 +635,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
           await copyPngToClipboard(blobPromise);
         } catch (error) {
           fail('Could not copy this graphic as PNG', error);
+        } finally {
+          endGesture();
         }
       }
     });
@@ -613,18 +679,22 @@ const plugin: JupyterFrontEndPlugin<void> = {
           }
 
           let pngBlob: Blob;
-          // Hash source used only to derive a deterministic filename. Use the
-          // raw src for IMG (never throws, unlike decodeURIComponent on a
-          // malformed escape) and the serialized markup for inline SVG.
+          // Hash source used only to derive a deterministic filename. Prefer
+          // the document text where there is one - a `blob:` URL is a fresh
+          // random id on every render, so hashing it names the same file
+          // differently each time. Otherwise the raw src (never throws, unlike
+          // decodeURIComponent on a malformed escape), and the serialized
+          // markup for inline SVG.
           let hashSource: string;
 
           if (found.type === 'img') {
-            hashSource = found.element.src || '';
+            hashSource = found.source ?? found.element.src;
             pngBlob = await imgToPng(
               found.element,
               targetWidth,
               backgroundColor,
-              exportThemeMode
+              exportThemeMode,
+              found.source
             );
           } else {
             hashSource = new XMLSerializer().serializeToString(found.element);
@@ -640,6 +710,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
           downloadPng(pngBlob, filename);
         } catch (error) {
           fail('Could not save this graphic as PNG', error);
+        } finally {
+          endGesture();
         }
       }
     });

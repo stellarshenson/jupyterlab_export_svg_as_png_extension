@@ -47,6 +47,9 @@ The menu items are offered for the graphic under the pointer. A click that lands
   - log: 2026-08-21 criterion added
   - log: 2026-08-21 closed: verified in browser against live server (v1.1.7)
   - log: 2026-08-21 covered by ui-tests/tests/context-menu.spec.ts
+- [x] **Image Viewer export** - `Save as PNG` on an `.svg` opened as a file produces the PNG, not only the menu entry
+  - log: 2026-09-02 criterion added after DEF-19: the three criteria above assert menu state only, and every one of them held while this export could not run at all for any file. A path is not covered by proof that it is offered
+  - log: 2026-09-02 closed: covered by 'exports the file, whose blob URL is already revoked', which asserts the blob URL is unreadable before exporting and then pins the export at chart.svg's own 1920x1248; mutation restoring the URL-only read produces no download at all
 - [x] **No duplicate entries** - a single right-click contributes at most one `Copy as PNG` and one `Save as PNG`, despite registration on `.jp-RenderedSVG`, `.jp-RenderedHTMLCommon` and `.jp-ImageViewer`
   - log: 2026-08-21 criterion added
   - log: 2026-08-21 closed: verified in browser against live server (v1.1.7)
@@ -94,18 +97,20 @@ Client-side Canvas rendering; theme-dependent CSS in the source SVG is resolved 
 - [x] **Theme resolution** - `@media (prefers-color-scheme)` blocks are resolved against the JupyterLab theme, not the OS setting, so the PNG matches what is on screen
   - log: 2026-08-21 criterion added, implemented earlier (v0.1.1)
   - log: 2026-08-22 covered by ui-tests/tests/context-menu.spec.ts: the exported corner pixel is asserted white under the default settings and `#1e1e1e` under `exportThemeMode: 'dark'`
-- [x] **UTF-8 sources** - an SVG containing multibyte characters (`->`, `EUR`, en dash) converts without `InvalidCharacterError`; all source URL forms (base64 data URI, url-encoded, `blob:`, `http:`) decode via `fetch`
+- [x] **UTF-8 sources** - an SVG containing multibyte characters (`->`, `EUR`, en dash) converts without `InvalidCharacterError`; `data:` and `http:` sources decode via `fetch`, which handles every URL escaping form natively, and a `blob:` source is read from the document model instead
   - log: 2026-08-21 criterion added, fixed earlier (v1.1.6)
   - log: 2026-08-21 not covered by tests: the multibyte fixture only ever travels the http-URL path, and the suite's one data-URI SVG is pure ASCII
   - log: 2026-08-22 left uncovered deliberately: the failure mode is corrupted glyphs, which no dimension or byte-count assertion can detect, and the pre-fix code is not in this repository's history (single commit), so no mutation can prove a candidate test would bite. Pinning it honestly needs a rendered-text comparison
+  - log: 2026-09-02 amended: `blob:` removed from the fetch list. DEF-19 established that the image viewer's blob URL is revoked before the graphic is on screen, so that form is never fetchable; it now reads `context.model.toString()`, which is the same string the viewer built its Blob from, so the decoding this criterion is about does not arise for it
 - [x] **Clipboard gesture** - `navigator.clipboard.write()` is initiated synchronously inside the user gesture with a promise-backed `ClipboardItem`, so copying never fails with `NotAllowedError: Document is not focused`
   - log: 2026-08-21 criterion added, fixed earlier (v1.1.6)
 - [x] **Aspect ratio** - canvas width is the configured target width, height is `round(sourceHeight * targetWidth / sourceWidth)`
   - log: 2026-08-21 criterion added, implemented earlier (v1.1.1)
-- [x] **Filename** - saved file is `svg-<widget-title>-<hash>.png`, hash derived from the raw image source
+- [x] **Filename** - saved file is `svg-<widget-title>-<hash>.png`, hash derived from the document text where there is one, else from the raw image source
   - log: 2026-08-21 criterion added
   - log: 2026-08-21 only the `svg-*.png` shape is asserted; neither the title segment nor the hash is checked
   - log: 2026-08-22 closed: the download assertion now pins `svg-graphics-<8 base36>.png`, so both the stripped widget title and the hash shape are checked; mutation-verified against the real value `svg-graphics-00hvb24e.png`
+  - log: 2026-09-02 amended: the raw source is a `blob:` uuid in the image viewer, freshly minted on every render, so the same unchanged file was named differently on every export. The document text is used where one resolves; pinned by the reopen half of 'exports the file, whose blob URL is already revoked'
 
 ## Settings
 

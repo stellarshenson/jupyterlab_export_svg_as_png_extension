@@ -65,6 +65,33 @@ will be opened in your browser at the end of the tests execution; see
 [Playwright documentation](https://playwright.dev/docs/test-reporters#html-reporter)
 for configuring that behavior.
 
+> [!WARNING]
+> Do not pipe the run through `tee`. The pipeline exits with `tee`'s status, not
+> Playwright's, so a suite whose server never started reports success. Redirect,
+> or turn on `pipefail`:
+>
+> ```sh
+> jlpm playwright test > ../logs/galata.log 2>&1; echo "exit: $?"
+> set -o pipefail && jlpm playwright test 2>&1 | tee ../logs/galata.log
+> ```
+
+## Dependency pinning
+
+Galata reaches into JupyterLab's DOM, so its minor tracks JupyterLab's: galata 5.6
+pairs with JupyterLab 4.6. Pair it with a newer lab and _every_ test times out inside
+`page.goto()` before any test body runs - a uniform timeout across the whole suite is
+the signature, where a real defect fails a subset.
+
+- `@jupyterlab/galata` is pinned to the minor that matches the JupyterLab this
+  extension targets, not left on the range the project template scaffolded
+- `@playwright/test` is declared at galata's own floor. Declaring a lower range makes
+  yarn install two copies once the ranges stop overlapping; the runner then loads one
+  and the spec's `test` import comes from the other, which fails as `No tests found`
+  on CI while passing locally. One `"@playwright/test@npm:..."` stanza in `yarn.lock`
+  is the healthy state, two is the defect
+- `package.json` and `yarn.lock` are committed together. Changing a range without the
+  lockfile leaves the old version pinned for CI
+
 ## Update the tests snapshots
 
 > All commands are assumed to be executed from the root directory

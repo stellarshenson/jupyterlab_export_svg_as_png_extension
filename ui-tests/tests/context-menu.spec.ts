@@ -553,4 +553,87 @@ test.describe('image viewer', () => {
 
     await expectHidden(page);
   });
+
+  test('exports the file, whose blob URL is already revoked', async ({
+    page,
+    tmpPath
+  }) => {
+    // DEF-19. The three tests above only prove the menu is offered; every one
+    // of them passed while this export could not run at all. JupyterLab 4.6
+    // revokes the viewer's blob URL inside the image's own load handler, so
+    // the URL is out of the registry before the graphic is even on screen -
+    // `complete` and `naturalWidth` still report a healthy image, and reading
+    // the source back from `img.src` fails. Assert the URL really is dead, so
+    // this stays a test of the document-model path and does not quietly pass
+    // on a future JupyterLab that keeps the URL alive.
+    await upload(page, tmpPath, 'chart.svg');
+    await page.filebrowser.open(`${tmpPath}/chart.svg`);
+    const img = page.locator('.jp-MainAreaWidget:visible .jp-ImageViewer img');
+    await img.waitFor();
+
+    const state = await page.evaluate(async () => {
+      const el = document.querySelector(
+        '.jp-MainAreaWidget .jp-ImageViewer img'
+      ) as HTMLImageElement;
+      let readable = true;
+      try {
+        await fetch(el.src);
+      } catch {
+        readable = false;
+      }
+      return {
+        src: el.src,
+        blob: el.src.startsWith('blob:'),
+        readable,
+        nw: el.naturalWidth
+      };
+    });
+    expect(state.blob).toBe(true);
+    expect(state.nw).toBeGreaterThan(0);
+    expect(state.readable).toBe(false);
+
+    const exportOnce = async () => {
+      await img.click({ button: 'right' });
+      const download = page.waitForEvent('download', { timeout: 15000 });
+      await page.locator(SAVE).click();
+      return download;
+    };
+
+    const saved = await exportOnce();
+
+    // Size alone proves nothing about *which* markup was read: svgToPng takes
+    // its dimensions from the img's naturalWidth/naturalHeight, so any
+    // renderable SVG handed to it comes out 1920x1248 here. The pixel is what
+    // identifies the document - chart.svg paints a full-bleed white `.bg`
+    // rect, where square.svg, the other fixture, would read [201, 74, 74].
+    expect(pngSize(await saved.path())).toEqual(CHART_PNG);
+    expect(await pngPixel(page, await saved.path(), 2, 2)).toEqual(LIGHT_BG);
+    // generateFilename strips only document extensions, so an image file keeps
+    // its own - `svg-chart.svg-<hash>.png` is the shape here, not `svg-chart-`
+    expect(saved.suggestedFilename()).toMatch(
+      /^svg-chart\.svg-[0-9a-z]{8}\.png$/
+    );
+
+    // The hash must come from the file's content, not from `img.src`: the blob
+    // id is a fresh uuid on every render, so hashing it renames the same
+    // unchanged file on every export. Reopening mints a new id, so a name that
+    // survives the round trip is one the id did not contribute to.
+    await page.activity.closeAll();
+    await page.filebrowser.open(`${tmpPath}/chart.svg`);
+    await img.waitFor();
+    expect(
+      await page.evaluate(
+        () =>
+          (
+            document.querySelector(
+              '.jp-MainAreaWidget .jp-ImageViewer img'
+            ) as HTMLImageElement
+          ).src
+      )
+    ).not.toBe(state.src);
+
+    expect((await exportOnce()).suggestedFilename()).toBe(
+      saved.suggestedFilename()
+    );
+  });
 });
