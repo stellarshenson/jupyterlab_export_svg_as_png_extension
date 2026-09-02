@@ -3,6 +3,18 @@
 All notable changes to this project are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.15] - 2026-09-02
+
+### Fixed
+
+- `Copy as PNG` and `Save as PNG` work again on an SVG file opened in JupyterLab's image viewer. Every export from that viewer failed with `TypeError: Failed to fetch` and produced no file - for every SVG file, from the moment it opened. JupyterLab 4.6 revokes the viewer's `blob:` URL inside the image's own load handler, so the URL is gone before the graphic is on screen; the exporter now reads the markup from the open document instead of the URL, which is the same content the viewer itself renders from
+- An image the exporter cannot read is no longer offered in the menu. The previous check tested that the image had loaded, which stays true after its URL is revoked, so the item appeared and then failed on click
+- A file exported from the image viewer keeps the same name each time. The name was hashed from the image's internal URL, which JupyterLab regenerates on every redraw, so the same unchanged file was saved under a different name after any redraw
+
+### Changed
+
+- Integration tests pin `@jupyterlab/galata` to the release matching JupyterLab 4.6 and declare `@playwright/test` at the version galata itself requires, so a single copy of the test runner is installed; the test lockfile is now committed populated rather than empty
+
 ## [1.1.14] - 2026-08-22
 
 ### Fixed
