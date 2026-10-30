@@ -67,4 +67,14 @@ This release carries no change to the extension itself - the published code is i
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.1.17] - 2026-10-30
+
+### Changed
+
+- Upgrade to extension template v4.6.5 and Makefile 1.46
+
+### Fixed
+
+- Take the scoped @stellarshenson/jupyterlab-export-svg-as-png-extension npm name
+
 <!-- <END NEW CHANGELOG ENTRY> -->
