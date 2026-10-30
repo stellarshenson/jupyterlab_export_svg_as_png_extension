@@ -5,3 +5,6 @@ node_modules
 !/package.json
 jupyterlab_export_svg_as_png_extension
 .claude
+eslint.config.mjs
+.venv
+.agents

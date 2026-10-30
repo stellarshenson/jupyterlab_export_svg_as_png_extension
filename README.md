@@ -30,7 +30,7 @@ Copy or export any SVG graphic in JupyterLab as a high-quality PNG image. Right-
 
 ## Installation
 
-Requires JupyterLab 4.0.0 or higher.
+Requires JupyterLab 4.6.0 or higher.
 
 ```bash
 pip install jupyterlab-export-svg-as-png-extension
