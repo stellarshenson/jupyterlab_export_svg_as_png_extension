@@ -19,7 +19,7 @@ test('should emit an activation console message', async ({ page }) => {
     logs.filter(
       s =>
         s ===
-        'JupyterLab extension jupyterlab_export_svg_as_png_extension is activated!'
+        'JupyterLab extension @stellarshenson/jupyterlab-export-svg-as-png-extension is activated!'
     )
   ).toHaveLength(1);
 });

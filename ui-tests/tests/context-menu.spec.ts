@@ -13,7 +13,7 @@ import * as path from 'path';
  */
 
 const FIXTURES = path.resolve(__dirname, 'fixtures');
-const PLUGIN = 'jupyterlab_export_svg_as_png_extension:plugin';
+const PLUGIN = '@stellarshenson/jupyterlab-export-svg-as-png-extension:plugin';
 
 // Select menu items by command id, not by label. A label locator that matches
 // nothing cannot tell "correctly hidden" from "extension never loaded", and

@@ -289,10 +289,10 @@ const SINGLE_GRAPHIC_HOLDERS =
   '.jp-RenderedSVG, .jp-RenderedMermaid, .jp-ImageViewer';
 
 /**
- * Initialization data for the jupyterlab_export_svg_as_png_extension extension.
+ * Initialization data for the @stellarshenson/jupyterlab-export-svg-as-png-extension extension.
  */
 const plugin: JupyterFrontEndPlugin<void> = {
-  id: 'jupyterlab_export_svg_as_png_extension:plugin',
+  id: '@stellarshenson/jupyterlab-export-svg-as-png-extension:plugin',
   description:
     'Jupyterlab extension to allow copying and exporting any given SVG graphics as PNG',
   autoStart: true,
@@ -733,7 +733,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     });
 
     console.log(
-      'JupyterLab extension jupyterlab_export_svg_as_png_extension is activated!'
+      'JupyterLab extension @stellarshenson/jupyterlab-export-svg-as-png-extension is activated!'
     );
   }
 };
