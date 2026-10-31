@@ -1,6 +1,6 @@
 {
     "name": "@stellarshenson/jupyterlab-export-svg-as-png-extension",
-    "version": "1.1.17",
+    "version": "1.1.18",
     "description": "Jupyterlab extension to allow copying and exporting any given SVG graphics as PNG",
     "keywords": [
         "jupyter",
@@ -19,7 +19,8 @@
     "files": [
         "lib/**/*.{d.ts,eot,gif,html,jpg,js,js.map,json,png,svg,woff2,ttf}",
         "style/**/*.{css,js,eot,gif,html,jpg,json,png,svg,woff2,ttf}",
-        "src/**/*.{ts,tsx}"
+        "src/**/*.{ts,tsx}",
+        "schema/*.json"
     ],
     "main": "lib/index.js",
     "types": "lib/index.d.ts",

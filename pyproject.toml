@@ -25,13 +25,7 @@ classifiers = [
 dependencies = [
     "jupyter_server>=2.21,<3"
 ]
-dynamic = ["version", "description", "authors", "keywords"]
-
-[project.urls]
-Homepage = "https://github.com/stellarshenson/jupyterlab_export_svg_as_png_extension"
-Repository = "https://github.com/stellarshenson/jupyterlab_export_svg_as_png_extension.git"
-Issues = "https://github.com/stellarshenson/jupyterlab_export_svg_as_png_extension/issues"
-Changelog = "https://github.com/stellarshenson/jupyterlab_export_svg_as_png_extension/blob/main/CHANGELOG.md"
+dynamic = ["version", "description", "authors", "urls", "keywords"]
 
 [project.optional-dependencies]
 dev = [
@@ -39,10 +33,10 @@ dev = [
     "jupyter-builder>=1.2.0,<2",
 ]
 test = [
-    "coverage",
-    "pytest",
-    "pytest-asyncio",
-    "pytest-cov",
+    "coverage>=7.17,<8",
+    "pytest>=9.2,<10",
+    "pytest-asyncio>=1.4,<2",
+    "pytest-cov>=7.1,<8",
     "pytest-jupyter[server]>=0.11,<1"
 ]
 
@@ -50,7 +44,7 @@ test = [
 source = "nodejs"
 
 [tool.hatch.metadata.hooks.nodejs]
-fields = ["description", "authors", "keywords"]
+fields = ["description", "authors", "urls", "keywords"]
 
 [tool.hatch.build.targets.sdist]
 artifacts = ["jupyterlab_export_svg_as_png_extension/labextension"]
@@ -93,6 +87,9 @@ before-build-npm = [
     "jlpm build:prod"
 ]
 before-build-python = ["jlpm clean:all"]
+# The mock PyPI of the check, pypiserver 2.3.2 on Python 3.13, answers 400 when metadata plus a file part held in memory pass 102400 bytes.
+# Newer pypiserver prints "Listening on" to stderr and jupyter-releaser waits for it on stdout, so the limit is raised in place.
+before-publish-assets = ["""python -c "import pathlib, pypiserver; [f.write_text(f.read_text().replace('MEMFILE_MAX = 102400', 'MEMFILE_MAX = 2 ** 30')) for f in pathlib.Path(pypiserver.__file__).parent.rglob('bottle.py')]" """]
 
 [tool.check-wheel-contents]
 ignore = ["W002"]

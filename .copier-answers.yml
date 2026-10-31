@@ -6,12 +6,12 @@ author_email: konrad.jelen@gmail.com
 author_name: Stellars Henson
 has_ai_rules: false
 has_binder: false
-has_settings: false
+has_settings: true
 kind: frontend-and-server
 labextension_name: '@stellarshenson/jupyterlab-export-svg-as-png-extension'
 project_short_description: Jupyterlab extension to allow copying and exporting any
     given SVG graphics as PNG
 python_name: jupyterlab_export_svg_as_png_extension
-repository: ''
+repository: https://github.com/stellarshenson/jupyterlab_export_svg_as_png_extension
 test: true
 
