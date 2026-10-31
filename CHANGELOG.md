@@ -67,6 +67,12 @@ This release carries no change to the extension itself - the published code is i
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.1.19] - 2026-10-31
+
+### Changed
+
+- Apply the template files and packages the upgrade left out
+
 ## [1.1.17] - 2026-10-30
 
 ### Changed
