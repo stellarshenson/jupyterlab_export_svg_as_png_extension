@@ -67,6 +67,17 @@ This release carries no change to the extension itself - the published code is i
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.1.24] - 2026-11-13
+
+### Changed
+
+- Prove the export items on a rendered SVG notebook output
+- Build the graphic identity key once per right-click
+
+### Fixed
+
+- Offer the PNG items on a standalone mermaid diagram
+
 ## [1.1.20] - 2026-10-31
 
 ### Changed
