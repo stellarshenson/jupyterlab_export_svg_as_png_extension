@@ -559,7 +559,12 @@ const plugin: JupyterFrontEndPlugin<void> = {
         lastContextMenuTarget.isConnected
       ) {
         const found = resolveFrom(lastContextMenuTarget);
-        lastResolvedKey = found ? keyOf(found) : null;
+        // Once per gesture: Lumino calls isVisible/isEnabled on every menu
+        // update (each pointer move between items), and keyOf serializes the
+        // whole graphic.
+        if (found && lastResolvedKey === null) {
+          lastResolvedKey = keyOf(found);
+        }
         return found;
       }
 
