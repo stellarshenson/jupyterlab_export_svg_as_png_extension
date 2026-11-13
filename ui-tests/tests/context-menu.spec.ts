@@ -637,3 +637,20 @@ test.describe('image viewer', () => {
     );
   });
 });
+
+test.describe('mermaid file', () => {
+  test('offers exactly one pair on a standalone diagram', async ({
+    page,
+    tmpPath
+  }) => {
+    // a .mmd file renders .jp-RenderedMermaid with no .jp-RenderedHTMLCommon
+    // ancestor, so none of the markdown registrations reach it
+    await upload(page, tmpPath, 'diagram.mmd');
+    await page.filebrowser.open(`${tmpPath}/diagram.mmd`);
+    await page
+      .locator('.jp-MainAreaWidget:visible .jp-RenderedMermaid img')
+      .click({ button: 'right' });
+
+    await expectOffered(page);
+  });
+});

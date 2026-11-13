@@ -67,6 +67,13 @@
   - log: 2026-09-02T00:00:00Z @kj fixed (unreleased): document-model source added; the three pre-existing image-viewer tests all asserted the menu was offered and none performed an export, which is how a path broken for every file stayed green. Regression covered by 'exports the file, whose blob URL is already revoked', which asserts the URL really is dead before exporting so it cannot quietly pass on a JupyterLab that keeps it alive; mutation restoring the URL-only read turns it red with no download at all
   - log: 2026-09-02T00:00:00Z @kj also fixed: the filename hash was taken from `img.src`, a uuid minted afresh on every re-render, so two exports either side of a re-render or a reopen named the same unchanged file differently; it now hashes the document text, pinned by the reopen half of the same test
   - log: 2026-09-02T00:00:00Z @kj accepted cost: `keyOf` and the filename hash now walk the document text rather than a short URL, and `keyOf` runs on every `isVisible`/`isEnabled` probe - about 200 ms of main-thread work per Save on a 20 MB file. Not remedied: hashing the key would trade the bytes for a collision that exports the wrong graphic, which is the DEF-6 class. The retention half was remedied - both commands now drop `lastResolvedKey` when they finish, so a large file is not held until the next right-click
+- [x] `DEF-MENU-21-MERMAID-FILE` **items never offered on a standalone mermaid diagram** - MEDIUM; Copy as PNG and Save as PNG are not in the context menu of a .mmd/.mermaid file or a text/vnd.mermaid notebook output; a user cannot export such a diagram
+  - evidence: one registration per command on .jp-RenderedMermaid:not(.jp-RenderedHTMLCommon .jp-RenderedMermaid), src/index.ts; Galata 'mermaid file' test and the markdown-fence tests pass, build_test.py: Galata 25 green
+  - repro: open a .mmd file, right-click the rendered diagram; neither item is in the menu
+  - test-tags: E2E
+  - root-cause: 2026-11-13T07:29:07Z @kj the menu items were registered on .jp-RenderedSVG, .jp-RenderedHTMLCommon and .jp-ImageViewer only; a mermaid diagram outside rendered markdown has no .jp-RenderedHTMLCommon ancestor
+  - log: 2026-11-13T07:29:07Z @kj added
+  - log: 2026-11-13T07:29:07Z @kj closed
 
 ## Command lifecycle `CMD`
 

@@ -651,6 +651,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
     // registering on only one selector avoids duplicate entries on the same
     // element. .jp-ImageViewer covers SVG files opened directly (isImgSvg
     // filters by document extension to avoid showing on PNG/JPEG files).
+    // A mermaid diagram outside rendered markdown (a .mmd file, a mermaid
+    // output) has no .jp-RenderedHTMLCommon ancestor; the :not() keeps a
+    // markdown fence from matching two items.
     contextMenu.addItem({
       command: copySvgCommand,
       selector: '.jp-RenderedSVG',
@@ -664,6 +667,12 @@ const plugin: JupyterFrontEndPlugin<void> = {
     contextMenu.addItem({
       command: copySvgCommand,
       selector: '.jp-ImageViewer',
+      rank: 10
+    });
+    contextMenu.addItem({
+      command: copySvgCommand,
+      selector:
+        '.jp-RenderedMermaid:not(.jp-RenderedHTMLCommon .jp-RenderedMermaid)',
       rank: 10
     });
 
@@ -734,6 +743,12 @@ const plugin: JupyterFrontEndPlugin<void> = {
     contextMenu.addItem({
       command: downloadSvgCommand,
       selector: '.jp-ImageViewer',
+      rank: 11
+    });
+    contextMenu.addItem({
+      command: downloadSvgCommand,
+      selector:
+        '.jp-RenderedMermaid:not(.jp-RenderedHTMLCommon .jp-RenderedMermaid)',
       rank: 11
     });
 
