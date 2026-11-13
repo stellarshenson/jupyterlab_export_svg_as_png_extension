@@ -35,11 +35,13 @@ The menu items are offered for the graphic under the pointer. A click that lands
 - [x] `ACC-TARGET-4` **Hidden, not disabled** - MEDIUM; when there is nothing to export the items carry `lm-mod-hidden` rather than appearing greyed out
   - log: 2026-08-21T00:00:00Z @kj criterion added, held through the `DEF-1` fix (v1.1.7)
   - log: 2026-11-13T06:57:23Z @kj edited importance added "MEDIUM"
-- [ ] `ACC-TARGET-5` **Rendered SVG output** - HIGH; right-click on a `.jp-RenderedSVG` notebook output (matplotlib with `figure_format='svg'`) shows both items enabled
+- [x] `ACC-TARGET-5` **Rendered SVG output** - HIGH; right-click on a `.jp-RenderedSVG` notebook output (matplotlib with `figure_format='svg'`) shows both items enabled
+  - evidence: Galata test 'notebook output › offers both items on a rendered SVG output' in ui-tests/tests/context-menu.spec.ts runs a cell that displays an SVG and right-clicks the .jp-RenderedSVG image; build_test.py passed with Galata 26 at 1.1.23
   - log: 2026-08-21T00:00:00Z @kj criterion added
   - log: 2026-08-21T00:00:00Z @kj not covered by tests: rendering a stored SVG output needs a trusted notebook, which the galata harness cannot produce without a kernel run
   - log: 2026-08-22T00:00:00Z @kj still open, and the only criterion that is. Residual risk is narrow: `.jp-RenderedSVG` shares its resolution path with the two containers the suite does drive (`.jp-RenderedMermaid`, `.jp-ImageViewer`), so what is unverified is the selector registration for this one container, not the logic behind it. Closing it needs a kernel-executing notebook fixture
   - log: 2026-11-13T06:57:22Z @kj edited importance added "HIGH"
+  - log: 2026-11-13T09:19:55Z @kj closed
 - [x] `ACC-TARGET-6` **Markdown inline SVG** - HIGH; right-click on an inline `<svg>` inside rendered markdown shows both items enabled
   - log: 2026-08-21T00:00:00Z @kj criterion added
   - log: 2026-08-21T00:00:00Z @kj not reachable in rendered markdown: JupyterLab's sanitizer has no `svg` in allowedTags, and notebook SVG outputs render as `<img>`, so this path applies only to renderers that inject inline SVG (plotly, vega)

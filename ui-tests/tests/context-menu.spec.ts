@@ -654,3 +654,25 @@ test.describe('mermaid file', () => {
     await expectOffered(page);
   });
 });
+
+test.describe('notebook output', () => {
+  test('offers both items on a rendered SVG output', async ({ page }) => {
+    // the output of an executed cell is trusted, so core renders the
+    // image/svg+xml bundle into .jp-RenderedSVG, as matplotlib's svg format does
+    await page.notebook.createNew();
+    await page.notebook.setCell(
+      0,
+      'code',
+      [
+        'from IPython.display import SVG',
+        `SVG('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300"><rect width="300" height="300" fill="#c94a4a"/></svg>')`
+      ].join('\n')
+    );
+    await page.notebook.run();
+    await page
+      .locator('.jp-MainAreaWidget:visible .jp-RenderedSVG img')
+      .click({ button: 'right' });
+
+    await expectOffered(page);
+  });
+});
